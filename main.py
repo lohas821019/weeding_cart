@@ -70,11 +70,12 @@ def worker():
                 a[1] = a[1]-1
                 weed_signal.put(a)
             arm_move(a)
+
         except:
             pass
         
-        #如果手臂已經除玩草，讓車移動
-        if mid == None:
+        #如果手臂已經除完草，讓車移動
+        if mid == arm_loc:
             car_signal.put()== 'move'
 
 #無人車行進設定
@@ -95,6 +96,7 @@ threading.Thread(target=car_moving,args=(s,), daemon=True).start()
 #%%
 cap = cv2.VideoCapture(1)
 hw = []
+global arm_loc
 
 while cap.isOpened():
     _, frame = cap.read()
@@ -118,7 +120,10 @@ while cap.isOpened():
     imgContour_r,contours_r = cvzone.findContours(frame, mask_r)
     imgContour_g,contours_g = cvzone.findContours(frame, mask_g)
     imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
-
+    
+    #找到紅色的區域(手臂的位置)
+    if contours_r:
+        arm_loc = contours_r[0]['center']
 
     try:
         for i in range(0,len(data)):
@@ -127,7 +132,6 @@ while cap.isOpened():
             mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
             print(mid)
             cv2.circle(roi,(int(mid[0]),int(mid[1])), 15, (0, 0, 255), -1)
-            
             car_signal.put('stop')
             weed_signal.put(mid)
 
