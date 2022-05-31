@@ -21,10 +21,8 @@ https://stackoverflow.com/questions/70167811/how-to-load-custom-model-in-pytorch
     '''
 
 """
-import os
 import cv2
 import torch
-from PIL import Image
 
 def load_model():
     model = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
