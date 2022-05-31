@@ -4,3 +4,7 @@ cvzone
 torch 
 torchvision 
 torchaudio
+pandas
+tqdm
+matplotlib
+seaborn
