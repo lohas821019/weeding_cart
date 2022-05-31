@@ -38,7 +38,7 @@ def pred_img(img,model):
     with torch.no_grad():
         
         # Images
-        img = cv2.imread(img_path)[:, :, ::-1]  # OpenCV image (BGR to RGB)
+        # img = cv2.imread(img_path)[:, :, ::-1]  # OpenCV image (BGR to RGB)
         # Inference
         results = model(img, size=640)  # includes NMS
         # results.display()
