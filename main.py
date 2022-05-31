@@ -7,7 +7,7 @@ Created on Thu May 19 11:11:06 2022
 
 
 import os
-os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
+os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
 
 import threading , queue
 import time
@@ -18,12 +18,14 @@ from motor import *
 import cv2
 import cvzone
 from cvzone.ColorModule import ColorFinder
+from action import *
 
 #抓取紅色設定
 myColorFinder = ColorFinder()
-hsvVals_r = {'hmin': 130, 'smin': 212, 'vmin': 86, 'hmax': 179, 'smax': 255, 'vmax': 255}
-hsvVals_g = {'hmin': 32, 'smin': 99, 'vmin': 0, 'hmax': 55, 'smax': 158, 'vmax': 255}
-
+# hsvVals_r = {'hmin': 130, 'smin': 212, 'vmin': 86, 'hmax': 179, 'smax': 255, 'vmax': 255}
+hsvVals_r = {'hmin': 119, 'smin': 194, 'vmin': 116, 'hmax': 179, 'smax': 255, 'vmax': 255}
+# hsvVals_g = {'hmin': 32, 'smin': 99, 'vmin': 0, 'hmax': 55, 'smax': 158, 'vmax': 255}
+hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
 #深度學習model設定，取得模型
 get_model_label = 1
 if get_model_label:
@@ -31,8 +33,11 @@ if get_model_label:
     model = load_model()
     get_model_label = 0
 
-#機械手臂初始化
-s = motor_init()
+#車子馬達初始化
+try:
+    s = motor_init()
+except:
+    s.close()
 
 #機械手臂參數設定，手臂初始位置
 global a
@@ -92,11 +97,14 @@ def worker():
 def car_moving(s):
     #如果quene收到'stop' 則停止，如果quene收到'move'，則車子移動
     if car_signal.get() == 'stop':
-        motor_control(s,0)
+        print('car stop')
+        # motor_control(s,0)
     elif car_signal.get()== 'move':
-        motor_control(s,1)
+        # motor_control(s,1)
+        print('car move')
     else:
         pass
+
 
 #手臂初始化
 ans = arm_init()
@@ -109,7 +117,7 @@ threading.Thread(target=worker, daemon=True).start()
 threading.Thread(target=car_moving,args=(s,), daemon=True).start()
 #%%
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 hw = []
 global arm_loc
 
@@ -163,7 +171,7 @@ while cap.isOpened():
     
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
-        arm_home()
+        # arm_home()
         time.sleep(2)
         break
 
