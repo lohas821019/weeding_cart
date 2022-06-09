@@ -90,6 +90,7 @@ def worker():
         if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
             #這邊再加入手臂伸長的動作
             arm_move([0, -12, -15, -15, 0])#數值尚未更改
+            
             time.sleep(2)
             #這邊加入手臂收回的動作
             arm_move([0, -12, -15, -15, 0])
