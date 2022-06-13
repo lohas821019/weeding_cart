@@ -5,9 +5,9 @@ Created on Thu May 19 11:11:06 2022
 @author: Jason
 """
 
-
 import os
-os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
+# os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
+os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
 
 import threading , queue
 import time
@@ -26,12 +26,13 @@ hsvVals_r = {'hmin': 0, 'smin': 128, 'vmin': 134, 'hmax': 67, 'smax': 255, 'vmax
 # hsvVals_r = {'hmin': 119, 'smin': 194, 'vmin': 116, 'hmax': 179, 'smax': 255, 'vmax': 255}
 hsvVals_g = {'hmin': 38, 'smin': 166, 'vmin': 0, 'hmax': 120, 'smax': 255, 'vmax': 255}
 # hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
+
 #深度學習model設定，取得模型
-get_model_label = 1
+get_model_label = True
 if get_model_label:
     global model 
     model = load_model()
-    get_model_label = 0
+    get_model_label = False
 
 #車子馬達初始化
 try:
@@ -41,7 +42,8 @@ except:
 
 #機械手臂參數設定，手臂初始位置
 global a
-a = [0, -12, -15, -15, 0]
+# a = [0, -12, -15, -15, 0]
+a = [-18,0,0,0,0]
 
 # 手臂motor1={"max":10,"min":-18}
 # 手臂motor2={"max":10,"min":-8}
@@ -89,8 +91,11 @@ def worker():
         #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
             #這邊再加入手臂伸長的動作
+            arm_move([-18,0,0,0,0])
             time.sleep(2)
             #這邊加入手臂收回的動作
+            arm_move([-18,-8,-15,-15,0])
+            time.sleep(2)
             car_signal.put()== 'move'
 
 #無人車行進設定
@@ -156,8 +161,10 @@ while cap.isOpened():
         for i in range(0,len(data)):
             data = data.iloc[i]
             region = [int(data.xmin), int(data.ymin), int(data.xmax), int(data.ymax)]
-            cv2.rectangle(roi, (int(data.xmin), int(data.ymin)), (int(data.xmax), int(data.ymax)), (0, 0, 255), 2)
-            mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+            cv2.rectangle(frame, (int(data.xmin), int(data.ymin)), (int(data.xmax), int(data.ymax)), (0, 0, 255), 2)
+            # mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+            #測試用
+            mid = contours_g[0]['center']
             # print(mid)
             cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
             car_signal.put('stop')
