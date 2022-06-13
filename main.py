@@ -22,10 +22,10 @@ from action import *
 
 #抓取紅色設定
 myColorFinder = ColorFinder()
-# hsvVals_r = {'hmin': 130, 'smin': 212, 'vmin': 86, 'hmax': 179, 'smax': 255, 'vmax': 255}
-hsvVals_r = {'hmin': 119, 'smin': 194, 'vmin': 116, 'hmax': 179, 'smax': 255, 'vmax': 255}
-# hsvVals_g = {'hmin': 32, 'smin': 99, 'vmin': 0, 'hmax': 55, 'smax': 158, 'vmax': 255}
-hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
+hsvVals_r = {'hmin': 0, 'smin': 128, 'vmin': 134, 'hmax': 67, 'smax': 255, 'vmax': 255}
+# hsvVals_r = {'hmin': 119, 'smin': 194, 'vmin': 116, 'hmax': 179, 'smax': 255, 'vmax': 255}
+hsvVals_g = {'hmin': 38, 'smin': 166, 'vmin': 0, 'hmax': 120, 'smax': 255, 'vmax': 255}
+# hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
 #深度學習model設定，取得模型
 get_model_label = 1
 if get_model_label:
@@ -41,7 +41,7 @@ except:
 
 #機械手臂參數設定，手臂初始位置
 global a
-a = [-18,0,0,0,0]
+a = [0, -12, -15, -15, 0]
 
 # 手臂motor1={"max":10,"min":-18}
 # 手臂motor2={"max":10,"min":-8}
@@ -89,11 +89,8 @@ def worker():
         #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
             #這邊再加入手臂伸長的動作
-            arm_move([-18,0,0,0,0])
             time.sleep(2)
             #這邊加入手臂收回的動作
-            arm_move([-18,-8,-15,-15,0])
-            time.sleep(2)
             car_signal.put()== 'move'
 
 #無人車行進設定
@@ -107,6 +104,7 @@ def car_moving(s):
         print('car move')
     else:
         pass
+
 
 #手臂初始化
 ans = arm_init()
@@ -135,18 +133,18 @@ while cap.isOpened():
         # mid_pic = (mid_px,mid_py)
         region = []
 
-    roi = frame[int(h/2):h,0:w]
-    results_roi = model(roi, size=640)  # includes NMS
+    # roi = frame[int(h/2):h,0:w]
+    results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
     
     #分辨出紅色與綠色
-    imgColor_r,mask_r = myColorFinder.update(roi,hsvVals_r)
-    imgColor_g,mask_g = myColorFinder.update(roi,hsvVals_g)
+    imgColor_r,mask_r = myColorFinder.update(frame,hsvVals_r)
+    imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
     #抓取出區域輪廓以及中心點
-    imgContour_r,contours_r = cvzone.findContours(roi, mask_r)
-    imgContour_g,contours_g = cvzone.findContours(roi, mask_g)
+    imgContour_r,contours_r = cvzone.findContours(frame, mask_r)
+    imgContour_g,contours_g = cvzone.findContours(frame, mask_g)
     imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
     
     #找到紅色的區域(手臂的位置)
@@ -161,23 +159,24 @@ while cap.isOpened():
             cv2.rectangle(roi, (int(data.xmin), int(data.ymin)), (int(data.xmax), int(data.ymax)), (0, 0, 255), 2)
             mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
             # print(mid)
-            cv2.circle(roi,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
+            cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
             car_signal.put('stop')
             weed_signal.put(mid)
     except:
         pass
 
-    cv2.imshow("roi", roi)
+    # cv2.imshow("frame", frame)
     cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
     cv2.imshow("img_all",imgStack_all)
     
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
-        arm_home()
+        # arm_home()
         time.sleep(2)
         break
 
 cv2.destroyAllWindows()
 cap.release()
+time.sleep(2)
 arm_exit()
 
