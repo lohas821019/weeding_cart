@@ -138,7 +138,7 @@ t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
 t1.start()
 #%%
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 hw = []
 global arm_loc
 
@@ -217,4 +217,6 @@ cap.release()
 time.sleep(2)
 t.join()
 t1.join()
+
+sys.exit()
 
