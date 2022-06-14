@@ -21,7 +21,7 @@ def arm_exit():
     innfos.disableact(actuID)
 
 def arm_home():
-    innfos.setpos(actuID, [0, 12, 15, 0, 0])
+    innfos.setpos(actuID, [0,0,0,0,0])
     time.sleep(1)
 
 

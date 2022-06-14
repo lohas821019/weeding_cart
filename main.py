@@ -6,8 +6,8 @@ Created on Thu May 19 11:11:06 2022
 """
 
 import os
-# os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
-os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
+os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
+# os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
 
 import threading , queue
 import time
@@ -22,9 +22,9 @@ from action import *
 
 #抓取紅色設定
 myColorFinder = ColorFinder()
-hsvVals_r = {'hmin': 0, 'smin': 128, 'vmin': 134, 'hmax': 67, 'smax': 255, 'vmax': 255}
-# hsvVals_r = {'hmin': 119, 'smin': 194, 'vmin': 116, 'hmax': 179, 'smax': 255, 'vmax': 255}
-hsvVals_g = {'hmin': 38, 'smin': 166, 'vmin': 0, 'hmax': 120, 'smax': 255, 'vmax': 255}
+# hsvVals_r = {'hmin': 0, 'smin': 103, 'vmin': 90, 'hmax': 9, 'smax': 255, 'vmax': 255}
+hsvVals_r = {'hmin': 0, 'smin': 142, 'vmin': 0, 'hmax': 70, 'smax': 255, 'vmax': 255}
+hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
 # hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
 
 #深度學習model設定，取得模型
@@ -49,54 +49,66 @@ a = [-18,0,0,0,0]
 # 手臂motor2={"max":10,"min":-8}
 def worker():
     while True:
-        mid = weed_signal.get()
-
+        
+        mid_data = weed_signal.get()
+        weed_signal.task_done()
+        
+        mid = mid_data[0]
+        arm_loc = mid_data[1]
+        print(f"mid = {mid}" )
+        print(f"arm_loc = {arm_loc}" )
         #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
         try:
             #需重新確認上下的正負號
             #控制左右
-            if a[0] > 10 :
-                a[0] = 10
-            elif a[0] < -10 :
-                a[0] = -10
+            if a[0] > 0 :
+                a[0] = 0
+            elif a[0] < -18 :
+                a[0] = -18
 
             #控制上下
-            if a[1] > 0 :
-                a[1] = 0
-            elif a[1] <-12 :
-                a[1] = -12
+            if a[1] > 10 :
+                a[1] = 10
+            elif a[1] <-8 :
+                a[1] = -8
 
             #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
             #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
             if mid[0] - arm_loc[0] > 0:
-                a[0] = a[0]+1
-                weed_signal.put(a)
+                a[0] = a[0]+0.5
+                # weed_signal.put(a)
+
             else:
-                a[0] = a[0]-1
-                weed_signal.put(a)
+                a[0] = a[0]-0.5
+                # weed_signal.put(a)
                 
+            arm_move(a)
+            
+            #上下須再討論看看情況
             #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
             #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
             
-            if mid[1] - arm_loc[1] > 0:
-                a[1] = a[1]+1
-                weed_signal.put(a)
-            else:
-                a[1] = a[1]-1
-                weed_signal.put(a)
-            arm_move(a)
+            # if mid[1] - arm_loc[1] > 0:
+            #     a[1] = a[1]+0.5
+            #     weed_signal.put(a)
+            # else:
+            #     a[1] = a[1]-0.5
+            #     weed_signal.put(a)
+                
+            # arm_move(a)
         except:
             pass
 
+
         #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
-        if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
-            #這邊再加入手臂伸長的動作
-            arm_move([-18,0,0,0,0])
-            time.sleep(2)
-            #這邊加入手臂收回的動作
-            arm_move([-18,-8,-15,-15,0])
-            time.sleep(2)
-            car_signal.put()== 'move'
+        # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
+        #     #這邊再加入手臂伸長的動作
+        #     arm_move([-18,0,0,0,0])
+        #     time.sleep(2)
+        #     #這邊加入手臂收回的動作
+        #     arm_move([-18,-8,-15,-15,0])
+        #     time.sleep(2)
+        #     car_signal.put()== 'move'
 
 #無人車行進設定
 def car_moving(s):
@@ -114,12 +126,16 @@ def car_moving(s):
 #手臂初始化
 ans = arm_init()
 
+arm_home()
 #Queue初始化宣告
 weed_signal = queue.Queue()
 car_signal = queue.Queue()
 
-threading.Thread(target=worker, daemon=True).start()
-threading.Thread(target=car_moving,args=(s,), daemon=True).start()
+
+t = threading.Thread(target=worker, daemon=True)
+t.start()
+t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
+t1.start()
 #%%
 
 cap = cv2.VideoCapture(2)
@@ -155,20 +171,31 @@ while cap.isOpened():
     #找到紅色的區域(手臂的位置)
     if contours_r:
         arm_loc = contours_r[0]['center']
+        # print(f"arm_loc = {arm_loc}" )
+    else:
+        arm_loc = None
+        
+        
+    if contours_g:
+        mid = contours_g[0]['center']
+    else:
+        mid = None
 
     #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
-        for i in range(0,len(data)):
-            data = data.iloc[i]
-            region = [int(data.xmin), int(data.ymin), int(data.xmax), int(data.ymax)]
-            cv2.rectangle(frame, (int(data.xmin), int(data.ymin)), (int(data.xmax), int(data.ymax)), (0, 0, 255), 2)
+        # for i in range(0,len(data)):
+            # data = data.iloc[i]
+            # region = [int(data.xmin), int(data.ymin), int(data.xmax), int(data.ymax)]
+            # cv2.rectangle(frame, (int(data.xmin), int(data.ymin)), (int(data.xmax), int(data.ymax)), (0, 0, 255), 2)
             # mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
             #測試用
-            mid = contours_g[0]['center']
-            # print(mid)
-            cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
+            # mid = contours_g[0]['center']
+            # print(f"mid = {mid}")
+
+            # cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
             car_signal.put('stop')
-            weed_signal.put(mid)
+            if weed_signal.qsize() < 1:
+                weed_signal.put((mid,arm_loc))
     except:
         pass
 
@@ -178,12 +205,16 @@ while cap.isOpened():
     
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
-        # arm_home()
+        arm_home()
+
         time.sleep(2)
+        arm_exit()
         break
+
 
 cv2.destroyAllWindows()
 cap.release()
 time.sleep(2)
-arm_exit()
+t.join()
+t1.join()
 

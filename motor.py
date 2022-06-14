@@ -10,7 +10,7 @@ import time
 
 def motor_init():
     #右側輪胎
-    COM_PORT1 = 'COM4'
+    COM_PORT1 = 'COM3'
     baudRate = 9600
     ser1 = serial.Serial(COM_PORT1, baudRate, timeout=0.5)
     return ser1
