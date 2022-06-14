@@ -51,7 +51,7 @@ def worker():
     while True:
         
         mid_data = weed_signal.get()
-        weed_signal.task_done()
+        # weed_signal.task_done()
         
         mid = mid_data[0]
         arm_loc = mid_data[1]
@@ -164,8 +164,9 @@ while cap.isOpened():
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
     #抓取出區域輪廓以及中心點
-    imgContour_r,contours_r = cvzone.findContours(frame, mask_r)
-    imgContour_g,contours_g = cvzone.findContours(frame, mask_g)
+    #cvzone.findContours
+    imgContour_r,contours_r = cvzone.findContours(frame, mask_r,minArea=500)
+    imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
     imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
     
     #找到紅色的區域(手臂的位置)
@@ -174,7 +175,6 @@ while cap.isOpened():
         # print(f"arm_loc = {arm_loc}" )
     else:
         arm_loc = None
-        
         
     if contours_g:
         mid = contours_g[0]['center']
@@ -215,8 +215,6 @@ while cap.isOpened():
 cv2.destroyAllWindows()
 cap.release()
 time.sleep(2)
-t.join()
-t1.join()
 
 sys.exit()
 
