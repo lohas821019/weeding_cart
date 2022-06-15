@@ -85,24 +85,20 @@ def worker():
             #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
             if mid[0] - arm_loc[0] > 0:
                 a[0] = a[0]+0.5
-                # weed_signal.put(a)
             else:
                 a[0] = a[0]-0.5
-                # weed_signal.put(a)
             arm_move(a)
             
             #上下須再討論看看情況
             #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
             #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
             
-            # if mid[1] - arm_loc[1] > 0:
-            #     a[1] = a[1]+0.5
-            #     weed_signal.put(a)
-            # else:
-            #     a[1] = a[1]-0.5
-            #     weed_signal.put(a)
+            if mid[1] - arm_loc[1] > 0:
+                a[1] = a[1]+0.5
+            else:
+                a[1] = a[1]-0.5
                 
-            # arm_move(a)
+            arm_move(a)
             
             if last_dist <= now_dist:
                 #回復上一個動作
