@@ -11,7 +11,7 @@ os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
 
 import threading , queue
 import time
-
+import math
 #使用一般webcam
 from predict import *
 from motor import *
@@ -49,15 +49,23 @@ a = [-18,0,0,0,0]
 # 手臂motor2={"max":10,"min":-8}
 def worker():
     while True:
-        
+
+        n = 0
         mid_data = weed_signal.get()
         # weed_signal.task_done()
-        
         mid = mid_data[0]
         arm_loc = mid_data[1]
         print(f"mid = {mid}" )
         print(f"arm_loc = {arm_loc}" )
         
+        if mid and arm_loc:
+            mid = (int(mid[0]),int(mid[1]))
+            now_dist = sqrt((arm_loc[0]-mid[0])**2-(arm_loc[1]-mid[1])**2)
+            
+            if n == 0:
+                last_dist = now_dist
+                n = n + 1
+
         #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
         try:
             #需重新確認上下的正負號
@@ -96,18 +104,13 @@ def worker():
                 
             # arm_move(a)
             
+            if last_dist <= now_dist:
+                #回復上一個動作
+                pass
+
+            last_dist = now_dist
         except:
             pass
-
-        #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
-        # if mid[0]-100 <= arm_loc[0] <=mid[0]+100 and mid[1]-100 <= arm_loc[1] <=mid[1]+100:
-        #     #這邊再加入手臂伸長的動作
-        #     # arm_move([-18,0,0,0,0])
-        #     # time.sleep(2)
-        #     #這邊加入手臂收回的動作
-        #     # arm_move([-18,-8,-15,-15,0])
-        #     time.sleep(2)
-        #     car_signal.put()== 'move'
 
         # 如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
@@ -131,7 +134,6 @@ def car_moving(s):
     else:
         pass
 
-
 #手臂初始化
 ans = arm_init()
 arm_home()
@@ -146,9 +148,9 @@ t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
 t1.start()
 #%%
 
+
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 hw = []
-global arm_loc
 
 while cap.isOpened():
     _, frame = cap.read()
@@ -165,25 +167,36 @@ while cap.isOpened():
     # roi = frame[int(h/2):h,0:w]
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
-    data = results_roi.pandas().xyxy[0]
-    
-    #分辨出紅色與綠色
-    imgColor_r,mask_r = myColorFinder.update(frame,hsvVals_r)
-    imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
-    
-    #抓取出區域輪廓以及中心點
-    #cvzone.findContours
-    imgContour_r,contours_r = cvzone.findContours(frame, mask_r,minArea=500)
-    imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
-    imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
-    
-    #找到紅色的區域(手臂的位置)
-    if contours_r:
-        arm_loc = contours_r[0]['center']
-        # print(f"arm_loc = {arm_loc}" )
+    # data = results_roi.pandas().xyxy[0]
+
+    if results_roi.pandas().xyxy[0].name[0] == 'arm':
+        data = results_roi.pandas().xyxy[0]
+        arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
     else:
         arm_loc = None
-        
+    
+    if results_roi.pandas().xyxy[0].name[0] == 'grass':
+        mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+    else:
+        mid = None
+
+    #分辨出紅色與綠色
+    # imgColor_r,mask_r = myColorFinder.update(frame,hsvVals_r)
+    imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
+    
+    #抓取出區域輪廓以及中心點 cvzone.findContours
+    # imgContour_r,contours_r = cvzone.findContours(frame, mask_r,minArea=500)
+    imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
+    # imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
+    imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
+    
+    #找到紅色的區域(手臂的位置)
+    # if contours_r:
+    #     arm_loc = contours_r[0]['center']
+    #     # print(f"arm_loc = {arm_loc}" )
+    # else:
+    #     arm_loc = None
+    
     if contours_g:
         mid = contours_g[0]['center']
     else:
@@ -207,7 +220,7 @@ while cap.isOpened():
     except:
         pass
 
-    # cv2.imshow("frame", frame)
+    cv2.imshow("frame", frame)
     cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
     cv2.imshow("img_all",imgStack_all)
     

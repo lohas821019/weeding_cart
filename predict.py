@@ -25,7 +25,7 @@ import cv2
 import torch
 
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
     model.eval()
     
     return model
