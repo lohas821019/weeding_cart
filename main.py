@@ -57,6 +57,7 @@ def worker():
         arm_loc = mid_data[1]
         print(f"mid = {mid}" )
         print(f"arm_loc = {arm_loc}" )
+        
         #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
         try:
             #需重新確認上下的正負號
@@ -77,11 +78,9 @@ def worker():
             if mid[0] - arm_loc[0] > 0:
                 a[0] = a[0]+0.5
                 # weed_signal.put(a)
-
             else:
                 a[0] = a[0]-0.5
                 # weed_signal.put(a)
-                
             arm_move(a)
             
             #上下須再討論看看情況
@@ -96,11 +95,21 @@ def worker():
             #     weed_signal.put(a)
                 
             # arm_move(a)
+            
         except:
             pass
 
-
         #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
+        if mid[0]-100 <= arm_loc[0] <=mid[0]+100 and mid[1]-100 <= arm_loc[1] <=mid[1]+100:
+            #這邊再加入手臂伸長的動作
+            # arm_move([-18,0,0,0,0])
+            # time.sleep(2)
+            #這邊加入手臂收回的動作
+            # arm_move([-18,-8,-15,-15,0])
+            time.sleep(2)
+            car_signal.put()== 'move'
+
+        # 如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
         #     #這邊再加入手臂伸長的動作
         #     arm_move([-18,0,0,0,0])
@@ -125,12 +134,11 @@ def car_moving(s):
 
 #手臂初始化
 ans = arm_init()
-
 arm_home()
+
 #Queue初始化宣告
 weed_signal = queue.Queue()
 car_signal = queue.Queue()
-
 
 t = threading.Thread(target=worker, daemon=True)
 t.start()
