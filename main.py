@@ -23,7 +23,7 @@ from action import *
 #抓取紅色設定
 myColorFinder = ColorFinder()
 # hsvVals_r = {'hmin': 0, 'smin': 103, 'vmin': 90, 'hmax': 9, 'smax': 255, 'vmax': 255}
-hsvVals_r = {'hmin': 0, 'smin': 142, 'vmin': 0, 'hmax': 70, 'smax': 255, 'vmax': 255}
+hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
 hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
 # hsvVals_g ={'hmin': 82, 'smin': 114, 'vmin': 98, 'hmax': 112, 'smax': 255, 'vmax': 255}
 
@@ -100,14 +100,14 @@ def worker():
             pass
 
         #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
-        if mid[0]-100 <= arm_loc[0] <=mid[0]+100 and mid[1]-100 <= arm_loc[1] <=mid[1]+100:
-            #這邊再加入手臂伸長的動作
-            # arm_move([-18,0,0,0,0])
-            # time.sleep(2)
-            #這邊加入手臂收回的動作
-            # arm_move([-18,-8,-15,-15,0])
-            time.sleep(2)
-            car_signal.put()== 'move'
+        # if mid[0]-100 <= arm_loc[0] <=mid[0]+100 and mid[1]-100 <= arm_loc[1] <=mid[1]+100:
+        #     #這邊再加入手臂伸長的動作
+        #     # arm_move([-18,0,0,0,0])
+        #     # time.sleep(2)
+        #     #這邊加入手臂收回的動作
+        #     # arm_move([-18,-8,-15,-15,0])
+        #     time.sleep(2)
+        #     car_signal.put()== 'move'
 
         # 如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
