@@ -11,7 +11,7 @@ os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
 
 import threading , queue
 import time
-
+import math
 #使用一般webcam
 from predict import *
 from motor import *
@@ -19,6 +19,7 @@ import cv2
 import cvzone
 from cvzone.ColorModule import ColorFinder
 from action import *
+import sys
 
 #抓取紅色設定
 myColorFinder = ColorFinder()
@@ -49,15 +50,23 @@ a = [-18,0,0,0,0]
 # 手臂motor2={"max":10,"min":-8}
 def worker():
     while True:
-        
+
+        n = 0
         mid_data = weed_signal.get()
         # weed_signal.task_done()
-        
         mid = mid_data[0]
         arm_loc = mid_data[1]
         print(f"mid = {mid}" )
         print(f"arm_loc = {arm_loc}" )
         
+        if mid and arm_loc:
+            mid = (int(mid[0]),int(mid[1]))
+            # now_dist = math.sqrt((arm_loc[0]-mid[0])**2-(arm_loc[1]-mid[1])**2)
+            now_dist =100
+            if n == 0:
+                last_dist = now_dist
+                n = n + 1
+
         #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
         try:
             #需重新確認上下的正負號
@@ -75,39 +84,30 @@ def worker():
 
             #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
             #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-            if mid[0] - arm_loc[0] > 0:
+            if mid[0] - arm_loc[0] <= 0:
                 a[0] = a[0]+0.5
-                # weed_signal.put(a)
             else:
                 a[0] = a[0]-0.5
-                # weed_signal.put(a)
-            arm_move(a)
+            # arm_move(a)
             
             #上下須再討論看看情況
             #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
             #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
             
-            # if mid[1] - arm_loc[1] > 0:
-            #     a[1] = a[1]+0.5
-            #     weed_signal.put(a)
-            # else:
-            #     a[1] = a[1]-0.5
-            #     weed_signal.put(a)
+            if mid[1] - arm_loc[1] >= 0:
+                a[1] = a[1]+0.5
+            else:
+                a[1] = a[1]-0.5
                 
-            # arm_move(a)
+            arm_move(a)
             
+            if last_dist <= now_dist:
+                #回復上一個動作
+                pass
+
+            last_dist = now_dist
         except:
             pass
-
-        #如果手臂已經到達定點，伸長手臂除草，然後讓車移動
-        # if mid[0]-100 <= arm_loc[0] <=mid[0]+100 and mid[1]-100 <= arm_loc[1] <=mid[1]+100:
-        #     #這邊再加入手臂伸長的動作
-        #     # arm_move([-18,0,0,0,0])
-        #     # time.sleep(2)
-        #     #這邊加入手臂收回的動作
-        #     # arm_move([-18,-8,-15,-15,0])
-        #     time.sleep(2)
-        #     car_signal.put()== 'move'
 
         # 如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
@@ -130,7 +130,9 @@ def car_moving(s):
         print('car move')
     else:
         pass
-
+    
+    
+    
 
 #手臂初始化
 ans = arm_init()
@@ -146,9 +148,9 @@ t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
 t1.start()
 #%%
 
+
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 hw = []
-global arm_loc
 
 while cap.isOpened():
     _, frame = cap.read()
@@ -167,23 +169,43 @@ while cap.isOpened():
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
     
+    try:
+        if data.name.any():
+            if results_roi.pandas().xyxy[0].name[0] == 'arm':
+                data = results_roi.pandas().xyxy[0]
+                arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+                arm_loc = (int(arm_loc[0]),int(arm_loc[1]))
+            else:
+                arm_loc = None
+            
+            if results_roi.pandas().xyxy[0].name[0] == 'grass':
+                mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+                
+            else:
+                mid = None
+        else:
+            arm_loc = None
+    
+    except:
+        pass
+        
     #分辨出紅色與綠色
-    imgColor_r,mask_r = myColorFinder.update(frame,hsvVals_r)
+    # imgColor_r,mask_r = myColorFinder.update(frame,hsvVals_r)
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
-    #抓取出區域輪廓以及中心點
-    #cvzone.findContours
-    imgContour_r,contours_r = cvzone.findContours(frame, mask_r,minArea=500)
+    #抓取出區域輪廓以及中心點 cvzone.findContours
+    # imgContour_r,contours_r = cvzone.findContours(frame, mask_r,minArea=500)
     imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
-    imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
+    # imgStack_all = cvzone.stackImages([imgColor_r, imgColor_g, imgContour_r, imgContour_g],2,0.5)
+    imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
     
     #找到紅色的區域(手臂的位置)
-    if contours_r:
-        arm_loc = contours_r[0]['center']
-        # print(f"arm_loc = {arm_loc}" )
-    else:
-        arm_loc = None
-        
+    # if contours_r:
+    #     arm_loc = contours_r[0]['center']
+    #     # print(f"arm_loc = {arm_loc}" )
+    # else:
+    #     arm_loc = None
+    
     if contours_g:
         mid = contours_g[0]['center']
     else:
@@ -200,14 +222,16 @@ while cap.isOpened():
             # mid = contours_g[0]['center']
             # print(f"mid = {mid}")
 
-            # cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
+            cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
+            cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
+            
             car_signal.put('stop')
             if weed_signal.qsize() < 1:
                 weed_signal.put((mid,arm_loc))
     except:
         pass
 
-    # cv2.imshow("frame", frame)
+    cv2.imshow("frame", frame)
     cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
     cv2.imshow("img_all",imgStack_all)
     
