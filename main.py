@@ -43,6 +43,7 @@ except:
 
 #機械手臂參數設定，手臂初始位置
 global a
+global n
 # a = [0, -12, -15, -15, 0]
 a = [-18,0,0,0,0]
 
@@ -50,64 +51,66 @@ a = [-18,0,0,0,0]
 # 手臂motor2={"max":10,"min":-8}
 def worker():
     while True:
-
-        n = 0
+        
+        case = 0
         mid_data = weed_signal.get()
         # weed_signal.task_done()
         mid = mid_data[0]
         arm_loc = mid_data[1]
-        print(f"mid = {mid}" )
-        print(f"arm_loc = {arm_loc}" )
+        # print(f"mid = {mid}" )
+        # print(f"arm_loc = {arm_loc}" )
         
         if mid and arm_loc:
             mid = (int(mid[0]),int(mid[1]))
-            # now_dist = math.sqrt((arm_loc[0]-mid[0])**2-(arm_loc[1]-mid[1])**2)
-            now_dist =100
-            if n == 0:
-                last_dist = now_dist
-                n = n + 1
-
-        #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-        try:
-            #需重新確認上下的正負號
-            #控制左右
-            if a[0] > 0 :
-                a[0] = 0
-            elif a[0] < -18 :
-                a[0] = -18
-
-            #控制上下
-            if a[1] > 10 :
-                a[1] = 10
-            elif a[1] <-8 :
-                a[1] = -8
-
-            #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-            #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-            if mid[0] - arm_loc[0] <= 0:
-                a[0] = a[0]+0.5
-            else:
-                a[0] = a[0]-0.5
-            # arm_move(a)
+            sx = (arm_loc[0]-mid[0])**2
+            sy = (arm_loc[1]-mid[1])**2
+            now_dist = int(abs((sx-sy))**0.5)
             
-            #上下須再討論看看情況
-            #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-            #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-            
-            if mid[1] - arm_loc[1] >= 0:
-                a[1] = a[1]+0.5
-            else:
-                a[1] = a[1]-0.5
+        if now_dist <= 50:
+            #代表手臂在畫面上很靠近草
+            case = 1
+        
+        if case == 0:
+            #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
+            try:
+                #控制左右
+                if a[0] > 0 :
+                    a[0] = 0
+                elif a[0] < -18 :
+                    a[0] = -18
+    
+                #控制上下
+                if a[1] > 10 :
+                    a[1] = 10
+                elif a[1] <-8 :
+                    a[1] = -8
+    
+                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                if mid[0] - arm_loc[0] <= 0:
+                    a[0] = a[0]+0.5
+                else:
+                    a[0] = a[0]-0.5
                 
-            arm_move(a)
+                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                
+                if mid[1] - arm_loc[1] >= 0:
+                    a[1] = a[1]+0.5
+                else:
+                    a[1] = a[1]-0.5
+                    
+                arm_move(a)
             
-            if last_dist <= now_dist:
-                #回復上一個動作
+            except:
                 pass
+            
+        elif case == 1:
+            print("往下鑽")
+            
+            n = 0
+            case = 0
 
-            last_dist = now_dist
-        except:
-            pass
 
         # 如果手臂已經到達定點，伸長手臂除草，然後讓車移動
         # if region[0] <= arm_loc[0] <=region[2] and region[1] <= arm_loc[1] <=region[3]:
@@ -148,9 +151,9 @@ t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
 t1.start()
 #%%
 
-
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 hw = []
+n=0
 
 while cap.isOpened():
     _, frame = cap.read()
@@ -159,28 +162,23 @@ while cap.isOpened():
         h = frame.shape[0]
         w = frame.shape[1]
         hw.append((h,w))
-        # mid_px =(1.5*h)/2
-        # mid_py = w/2
-        # mid_pic = (mid_px,mid_py)
-        region = []
 
     # roi = frame[int(h/2):h,0:w]
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
-    
+    # print(data)
     try:
         if data.name.any():
             if results_roi.pandas().xyxy[0].name[0] == 'arm':
                 data = results_roi.pandas().xyxy[0]
                 arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
-                arm_loc = (int(arm_loc[0]),int(arm_loc[1]))
+                arm_loc = [int(arm_loc[0]),int(arm_loc[1])]
             else:
                 arm_loc = None
             
             if results_roi.pandas().xyxy[0].name[0] == 'grass':
                 mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
-                
             else:
                 mid = None
         else:
@@ -210,7 +208,13 @@ while cap.isOpened():
         mid = contours_g[0]['center']
     else:
         mid = None
-
+        
+    
+    if n == 0:
+        temp = mid
+        n = 1
+    
+    print(n)
     #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
         # for i in range(0,len(data)):
@@ -222,12 +226,13 @@ while cap.isOpened():
             # mid = contours_g[0]['center']
             # print(f"mid = {mid}")
 
-            cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
+            # cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
             cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
+            cv2.circle(frame,(int(temp[0]),int(temp[1])), 8, (0, 255, 255), -1)
             
             car_signal.put('stop')
             if weed_signal.qsize() < 1:
-                weed_signal.put((mid,arm_loc))
+                weed_signal.put((temp,arm_loc))
     except:
         pass
 
