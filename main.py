@@ -43,7 +43,6 @@ except:
 
 #機械手臂參數設定，手臂初始位置
 global a
-global n
 # a = [0, -12, -15, -15, 0]
 a = [-18,0,0,0,0]
 
@@ -69,6 +68,7 @@ def worker():
         if now_dist <= 50:
             #代表手臂在畫面上很靠近草
             case = 1
+        print(f"case = {case}" )
         
         if case == 0:
             #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
@@ -107,7 +107,8 @@ def worker():
             
         elif case == 1:
             print("往下鑽")
-            
+            car_signal.put('move')
+            global n
             n = 0
             case = 0
 
@@ -209,12 +210,11 @@ while cap.isOpened():
     else:
         mid = None
         
-    
     if n == 0:
         temp = mid
         n = 1
     
-    print(n)
+    print(f"n = {n}" )
     #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
         # for i in range(0,len(data)):
@@ -228,7 +228,7 @@ while cap.isOpened():
 
             # cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
             cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
-            cv2.circle(frame,(int(temp[0]),int(temp[1])), 8, (0, 255, 255), -1)
+            cv2.circle(frame,(int(temp[0]),int(temp[1])), 8, (0, 0, 255), -1)
             
             car_signal.put('stop')
             if weed_signal.qsize() < 1:

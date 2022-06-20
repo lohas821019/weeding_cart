@@ -20,7 +20,7 @@ import cvzone
 from cvzone.ColorModule import ColorFinder
 from action import *
 
-
+#%%
 class Car():
     def __init__(self):
         self.s = motor_init()
@@ -53,7 +53,9 @@ class Cam():
         self.cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
 def main():
-    cap = Cam()
+    
+    # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(0)
     while cap.isOpened:
         _, frame = cap.read()
         cv2.imshow("frame", frame)
