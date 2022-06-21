@@ -11,7 +11,7 @@ actuID = [0x01, 0x02, 0x03, 0x04, 0x05]
 
 def arm_init():
     statusg = innfos.handshake()
-    data = innfos.queryID(6)
+    data = innfos.queryID(5)
     innfos.enableact(actuID)
     time.sleep(1)
     innfos.trapposmode(actuID) #梯形模式

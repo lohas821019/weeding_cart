@@ -35,12 +35,12 @@ class Car():
 
 class Arm():
     def __init__(self):
-        self.ans = self.arm_init()
+        self.ans = arm_init()
         self.a = [-18,0,0,0,0]
         self.home()
-
+        
     def home(self):
-        self.arm_home()
+        arm_home()
     
     def moving(self,mid,arm_loc):
         #控制左右
@@ -140,6 +140,7 @@ def main():
     model = Yolov5_Model()
     model_flag = True
     cam = Cam()
+
     if main_signal.get():
         n = main_signal.get()
     else:
@@ -170,7 +171,8 @@ def main():
                 arm_loc = None
         except:
             pass
-        
+
+
         imgColor_g,mask_g = myColorFinder.update(frame,cam.hsvVals_g)
         #抓取出區域輪廓以及中心點 cvzone.findContours
         imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
@@ -202,7 +204,6 @@ def main():
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
             arm_home()
-
             time.sleep(2)
             arm_exit()
             break
@@ -212,8 +213,8 @@ def main():
     sys.exit()
 
 if __name__=="__main__":
+
     main()
-    
     main_signal =queue.Queue()
     weed_signal = queue.Queue()
     car_signal = queue.Queue()

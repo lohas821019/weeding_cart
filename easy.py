@@ -121,13 +121,10 @@ def car_moving(s):
     else:
         pass
 
-#手臂初始化
-ans = arm_init()
-arm_home()
 
 #Queue初始化宣告
-weed_signal = queue.Queue()
-car_signal = queue.Queue()
+# weed_signal = queue.Queue()
+# car_signal = queue.Queue()
 
 # t = threading.Thread(target=worker, daemon=True)
 # t.start()
@@ -135,13 +132,16 @@ car_signal = queue.Queue()
 # t1.start()
 
 #%%
-#step1
 
+#手臂初始化
+ans = arm_init()
+arm_home()
+
+#step1
 # task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
-n = 0
 
-while cap.isOpened():
+while 1:
     task_done = False
     _, frame = cap.read()
     results_roi = model(frame, size=640)  # includes NMS
@@ -159,6 +159,7 @@ while cap.isOpened():
         pass
     
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
+    
     #抓取出區域輪廓以及中心點 cvzone.findContours
     imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
     imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
@@ -171,7 +172,7 @@ while cap.isOpened():
     #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
         cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
-        cv2.circle(frame,(int(temp[0]),int(temp[1])), 8, (0, 0, 255), -1)
+        cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
         car_signal.put('stop')
     except:
         pass
@@ -182,57 +183,56 @@ while cap.isOpened():
     if mid and arm_loc:
         print('車子停止，除草')
         #計算手臂與雜草距離
-        while mid and arm_loc:
-            mid = (int(temp[0]),int(temp[1]))
-            sx = (arm_loc[0]-mid[0])**2
-            sy = (arm_loc[1]-mid[1])**2
-            now_dist = int(abs((sx-sy))**0.5)
+        mid = (int(mid[0]),int(mid[1]))
+        sx = (arm_loc[0]-mid[0])**2
+        sy = (arm_loc[1]-mid[1])**2
+        now_dist = int(abs((sx-sy))**0.5)
+        
+        if now_dist >= 50:
+            case = 0
+        else:
+            case = 1
             
-            if now_dist >= 50:
-                case = 0
-            else:
-                case = 1
-                
-            if case == 0:
-                #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-                try:
-                    #控制左右
-                    if a[0] > 0 :
-                        a[0] = 0
-                    elif a[0] < -18 :
-                        a[0] = -18
-                        
-                    #控制上下
-                    if a[1] > 10 :
-                        a[1] = 10
-                    elif a[1] <-8 :
-                        a[1] = -8
-                        
-                    #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                    #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                    if mid[0] - arm_loc[0] <= 0:
-                        a[0] = a[0]+0.5
-                    else:
-                        a[0] = a[0]-0.5
-                        
-                    #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                    #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                    if mid[1] - arm_loc[1] >= 0:
-                        a[1] = a[1]+0.5
-                    else:
-                        a[1] = a[1]-0.5
-                    arm_move(a)
-                except:
-                    pass
-                
-            elif case == 1:
-                print("往下鑽")
-                time.sleep(2)
-                arm_home()
-                mid = None
-                arm_loc = None
-                task_done =True
-                break
+        if case == 0:
+            #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
+            try:
+                #控制左右
+                if a[0] > 0 :
+                    a[0] = 0
+                elif a[0] < -18 :
+                    a[0] = -18
+                    
+                #控制上下
+                if a[1] > 10 :
+                    a[1] = 10
+                elif a[1] <-8 :
+                    a[1] = -8
+                    
+                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                if mid[0] - arm_loc[0] <= 0:
+                    a[0] = a[0]+0.5
+                else:
+                    a[0] = a[0]-0.5
+                    
+                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                if mid[1] - arm_loc[1] >= 0:
+                    a[1] = a[1]+0.5
+                else:
+                    a[1] = a[1]-0.5
+                arm_move(a)
+            except:
+                pass
+            
+        elif case == 1:
+            print("往下鑽")
+            time.sleep(2)
+            arm_home()
+            mid = None
+            arm_loc = None
+            task_done =True
+            break
     #如果沒有抓到草
     else:
         print('車子行進')
