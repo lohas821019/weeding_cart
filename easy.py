@@ -137,11 +137,12 @@ car_signal = queue.Queue()
 #%%
 #step1
 
-task_done = False
+# task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 n = 0
 
-if task_done == False:
+while cap.isOpened():
+    task_done = False
     _, frame = cap.read()
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
@@ -175,13 +176,11 @@ if task_done == False:
     except:
         pass
     cv2.imshow('frame', frame)
-    
+
 #step2
     #如果有抓到草
     if mid and arm_loc:
-        
         print('車子停止，除草')
-        
         #計算手臂與雜草距離
         while mid and arm_loc:
             mid = (int(temp[0]),int(temp[1]))
@@ -234,14 +233,22 @@ if task_done == False:
                 arm_loc = None
                 task_done =True
                 break
-            
     #如果沒有抓到草
     else:
         print('車子行進')
+        
+    k = cv2.waitKey(1) & 0xFF
+    if k == 27:
+        arm_home()
+        time.sleep(2)
+        arm_exit()
+        break
+    
+    if task_done == True:
+        continue
 
-# arm_home()
-# cv2.destroyAllWindows()
-# cap.release()
-# time.sleep(2)
-# sys.exit()
+cv2.destroyAllWindows()
+cap.release()
+time.sleep(2)
+sys.exit()
 
