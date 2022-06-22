@@ -137,6 +137,9 @@ def car_moving(s):
 ans = arm_init()
 arm_home()
 
+
+first =1
+
 #step1
 # task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
@@ -189,6 +192,23 @@ while 1:
         sy = (arm_loc[1]-mid[1])**2
         now_dist = int(abs((sx-sy))**0.5)
         
+        if first:
+            n = 0
+            data = []
+            first = 0
+        n = n + 1
+        data.append(now_dist)
+
+        if n>=5:
+            for i in range(0,len(data)-5+1):
+                mid_value = data[i+3]
+                summary = sum(data[i:i+5])
+                if mid_value*5 - summary<=5:
+                    arm_move(a)
+                    n = 0
+                    data = []
+
+
         if now_dist >= 50:
             case = 0
         else:
@@ -222,12 +242,11 @@ while 1:
                     a[1] = a[1]+0.5
                 else:
                     a[1] = a[1]-0.5
-                arm_move(a)
-                print('動完')
-
+                # arm_move(a)
+                # print('動完')
             except:
                 pass
-            
+
         elif case == 1:
             print("往下鑽")
             # time.sleep(2)
@@ -239,7 +258,6 @@ while 1:
             a = [-18,0,0,0,0]
 
             # break
-        
         cv2.waitKey(1)
         cv2.imshow('frame1', frame)
         
