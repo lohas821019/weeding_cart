@@ -24,23 +24,67 @@ from action import *
 #%%
 class Car():
     def __init__(self):
-        self.s = motor_init()
-
-    def move(self,s):
-        self.motor_control(s,0)
+        self.COM_PORT = 'COM4'
+        self.baudRate = 9600
+        self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
+        print('初始化成功')
+        
+    def forward(self):
+        self.ser1.write(1)
+        print('前進')
+        
+    def backward(self):
+        self.ser1.write(2)
+        print('後退')
+        
+    def stop(self):
+        self.ser1.write(0)
+        print('停止')
 
     def close(self):
-        self.s.close()
+        self.ser1.close()
+        print('關閉')
 
 
 class Arm():
     def __init__(self):
-        self.ans = arm_init()
+        self.actuID = [0x01, 0x02, 0x03, 0x04, 0x05]
+        self.statusg = innfos.handshake()
+        self.data = innfos.queryID(5)
+        self.innfos.enableact(self.actuID)
+        time.sleep(1)
+        self.innfos.trapposmode(self.actuID) #梯形模式
         self.a = [-18,0,0,0,0]
-        self.home()
+        self.innfos.setpos(self.actuID, [0,0,0,0,0])
+        time.sleep(1)
+        print("手臂初始化完成")
         
     def home(self):
-        arm_home()
+        self.innfos.setpos(self.actuID, [0,0,0,0,0])
+        time.sleep(1)
+        print("手臂回家")
+    
+    def move(self,pos):
+        self.innfos.setpos(self.actuID, pos)
+        time.sleep(1)
+        print("手臂移動")
+        
+    def arm_exit(self):
+        self.innfos.disableact(self.actuID)
+        print("斷開手臂連接")
+
+    def arm_show_nowpos(self):
+        self.nowpos = innfos.readpos(self.actuID)
+        print(f"nowpos = {self.nowpos}")
+        time.sleep(1)
+    
+    def arm_show_limitpos(self):
+        self.limitpos = innfos.readposlimit(self.actuID) #讀取極限位置設置
+        print(f"limitpos = {self.limitpos}")
+        time.sleep(1)
+    
+    def arm_set_limitpos(self):
+        self.innfos.poslimit(self.actuID,[15,-15],[15,-15])
     
     def moving(self,mid,arm_loc):
         #控制左右
@@ -75,8 +119,10 @@ class Yolov5_Model():
     def __init__(self):
         self.model_flag = False
         if self.model_flag == False:
-            self.model = load_model()
-
+            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
+            self.model.eval()
+            self.model_flag == True
+            
     def predict(self,frame):
         self.results_roi = self.model(frame, size=640)  # includes NMS
         self.results_roi.pred

@@ -173,7 +173,7 @@ while 1:
     try:
         cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
         cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
-        car_signal.put('stop')
+        # car_signal.put('stop')
     except:
         pass
     cv2.imshow('frame', frame)
@@ -207,7 +207,7 @@ while 1:
                     a[1] = 10
                 elif a[1] <-8 :
                     a[1] = -8
-                    
+
                 #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
                 #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
                 if mid[0] - arm_loc[0] <= 0:
@@ -222,6 +222,7 @@ while 1:
                 else:
                     a[1] = a[1]-0.5
                 arm_move(a)
+
             except:
                 pass
             
