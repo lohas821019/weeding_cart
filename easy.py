@@ -62,7 +62,7 @@ def worker():
             sy = (arm_loc[1]-mid[1])**2
             now_dist = int(abs((sx-sy))**0.5)
             
-        if now_dist <= 50:
+        if now_dist <= 30:
             #代表手臂在畫面上很靠近草
             case = 1
         print(f"case = {case}" )
@@ -176,6 +176,7 @@ while 1:
         # car_signal.put('stop')
     except:
         pass
+    cv2.waitKey(1)
     cv2.imshow('frame', frame)
 
 #step2
@@ -222,18 +223,26 @@ while 1:
                 else:
                     a[1] = a[1]-0.5
                 arm_move(a)
+                print('動完')
 
             except:
                 pass
             
         elif case == 1:
             print("往下鑽")
-            time.sleep(2)
+            # time.sleep(2)
             arm_home()
             mid = None
             arm_loc = None
             task_done =True
-            break
+            case = 0
+            a = [-18,0,0,0,0]
+
+            # break
+        
+        cv2.waitKey(1)
+        cv2.imshow('frame1', frame)
+        
     #如果沒有抓到草
     else:
         print('車子行進')
@@ -250,6 +259,7 @@ while 1:
 
 cv2.destroyAllWindows()
 cap.release()
+arm_exit()
 time.sleep(2)
 sys.exit()
 
