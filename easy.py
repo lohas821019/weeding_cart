@@ -208,12 +208,11 @@ while 1:
                     n = 0
                     data = []
 
-
         if now_dist >= 50:
             case = 0
         else:
             case = 1
-            
+
         if case == 0:
             #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
             try:
@@ -257,7 +256,6 @@ while 1:
             case = 0
             a = [-18,0,0,0,0]
 
-            # break
         cv2.waitKey(1)
         cv2.imshow('frame1', frame)
         

@@ -44,6 +44,18 @@ class Car():
     def close(self):
         self.ser1.close()
         print('關閉')
+        
+    def run(self):
+        if car_signal.get() == 'stop':
+            print('car stop')
+            self.stop()
+            
+        elif car_signal.get()== 'move':
+            # motor_control(s,1)
+            print('car move')
+            self.forward()
+        else:
+            pass
 
 
 class Arm():
@@ -86,54 +98,137 @@ class Arm():
     def arm_set_limitpos(self):
         self.innfos.poslimit(self.actuID,[15,-15],[15,-15])
     
-    def moving(self,mid,arm_loc):
-        #控制左右
-        if self.a[0] > 0 :
-            self.a[0] = 0
-        elif self.a[0] < -18 :
-            self.a[0] = -18
+    def moving(self):
+        if weed_signal.get():
+            data = weed_signal.get()
+            mid = data[0]
+            arm_loc = data[1]
 
-        #控制上下
-        if self.a[1] > 10 :
-            self.a[1] = 10
-        elif self.a[1] <-8 :
-            self.a[1] = -8
-
-        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-        if mid[0] - arm_loc[0] <= 0:
-            self.a[0] = self.a[0]+0.5
-        else:
-            self.a[0] = self.a[0]-0.5
-        
-        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-        
-        if mid[1] - arm_loc[1] >= 0:
-            self.a[1] = self.a[1]+0.5
-        else:
-            self.a[1] = self.a[1]-0.5
-        arm_move(self.a)
+            #控制左右
+            if self.a[0] > 0 :
+                self.a[0] = 0
+            elif self.a[0] < -18 :
+                self.a[0] = -18
+    
+            #控制上下
+            if self.a[1] > 10 :
+                self.a[1] = 10
+            elif self.a[1] <-8 :
+                self.a[1] = -8
+    
+            #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+            #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+            if mid[0] - arm_loc[0] <= 0:
+                self.a[0] = self.a[0]+0.5
+            else:
+                self.a[0] = self.a[0]-0.5
+            
+            #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+            #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+            
+            if mid[1] - arm_loc[1] >= 0:
+                self.a[1] = self.a[1]+0.5
+            else:
+                self.a[1] = self.a[1]-0.5
+            arm_move(self.a)
 
 class Yolov5_Model():
+    instance = None
+    model_flag = False
+    
     def __init__(self):
-        self.model_flag = False
-        if self.model_flag == False:
-            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
-            self.model.eval()
-            self.model_flag == True
+        
+        if Yolov5_Model.model_flag:
+            return
+        self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
+        self.model.eval()
+        Yolov5_Model.model_flag = True
             
     def predict(self,frame):
         self.results_roi = self.model(frame, size=640)  # includes NMS
         self.results_roi.pred
         return self.results_roi
+    
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super().__new__(cls)
+        return cls.instance
 
 class Cam():
     def __init__(self):
         self.hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
         self.hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
         # self.cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
+        self.path =r'C:\Users\Jason\Desktop\20220416\IMG_9073.MOV'
+        self.cap = cv2.VideoCapture(self.path)
+        # self.cap = cv2.VideoCapture(0)
+        self.model = Yolov5_Model()
+        self.myColorFinder = ColorFinder()
 
+        self.arm_loc = None
+        self.mid = None
+
+    def run(self):
+        while self.cap.isOpened:
+            _, self.frame = self.cap.read()
+            self.results_roi= self.model.predict(self.frame)
+            self.data = self.results_roi.pandas().xyxy[0]
+            cv2.imshow("frame", self.frame)
+
+            imgColor_g,mask_g = self.myColorFinder.update(self.frame,self.hsvVals_g)
+            #抓取出區域輪廓以及中心點 cvzone.findContours
+            imgContour_g,contours_g = cvzone.findContours(self.frame, mask_g,minArea=500)
+            imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
+
+            if contours_g:
+                self.mid = contours_g[0]['center']
+            else:
+                self.mid = None
+                
+            try:
+                if self.data.name.any():
+                    if self.pandas().xyxy[0].name[0] == 'arm':
+                        data_arm = self.results_roi.pandas().xyxy[0]
+                        self.arm_loc = ((data_arm.xmin + data_arm.xmax)/2,(data_arm.ymin + data_arm.ymax)/2)
+                        self.arm_loc = [int(self.arm_loc[0]),int(self.arm_loc[1])]
+                        
+                    else:
+                        self.arm_loc = None
+                    
+                    # if self.results_roi.pandas().xyxy[0].name[0] == 'grass':
+                    #     data_grass = self.results_roi.pandas().xyxy[0]
+                    #     self.mid = ((data_grass.xmin + data_grass.xmax)/2,(data_grass.ymin + data_grass.ymax)/2)
+                    # else:
+                    #     self.mid = None
+            except:
+                pass
+
+            try:
+                for i in range(0,len(self.data)):
+                    self.data1 = self.data.iloc[i]
+                    # cv2.rectangle(self.frame, (int(self.data1.xmin), int(self.data1.ymin)), (int(self.data1.xmax), int(self.data1.ymax)), (0, 0, 255), 2)
+                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 15, (0, 255, 255), -1)
+                    cv2.circle(self.frame,(int(self.mid[0]),int(self.mid[1])), 15, (0, 0, 255), -1)
+            except:
+                pass
+            
+            if self.mid and self.arm_loc:
+                car_signal.put('stop')
+                if weed_signal.qsize() < 1:
+                    weed_signal.put((self.mid,self.arm_loc))
+                    
+            cv2.imshow("frame", self.frame)
+            cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow("img_all",imgStack_all)
+            
+            k = cv2.waitKey(1) & 0xFF
+            if k == 27:
+                break
+
+        cv2.destroyAllWindows()
+        self.cap.release()
+        sys.exit()
+        
 def worker(arm):
     while True:
         case = 0
@@ -168,29 +263,14 @@ def worker(arm):
             main_signal.put(n)
             case = 0
 
-def car_moving(s):
-    #如果quene收到'stop' 則停止，如果quene收到'move'，則車子移動
-    if car_signal.get() == 'stop':
-        print('car stop')
-        # motor_control(s,0)
-    elif car_signal.get()== 'move':
-        # motor_control(s,1)
-        print('car move')
-    else:
-        pass
+
 
 def main():
     myColorFinder = ColorFinder()
     car = Car()
     arm = Arm()
     model = Yolov5_Model()
-    model_flag = True
     cam = Cam()
-
-    if main_signal.get():
-        n = main_signal.get()
-    else:
-        n = 0
 
     # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
     cap = cv2.VideoCapture(0)
@@ -258,15 +338,14 @@ def main():
     cap.release()
     sys.exit()
 
-if __name__=="__main__":
+# if __name__=="__main__":
 
-    main()
-    main_signal =queue.Queue()
-    weed_signal = queue.Queue()
-    car_signal = queue.Queue()
+#     main()
+weed_signal = queue.Queue()
+car_signal = queue.Queue()
 
-    t = threading.Thread(target=worker, daemon=True)
-    t.start()
-    t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
-    t1.start()
+#     t_car = threading.Thread(target=worker, daemon=True)
+#     t.start()
+#     t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
+#     t1.start()
     
