@@ -6,7 +6,7 @@ Created on Mon Jun 20 09:42:38 2022
 """
 import os
 # os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
-# os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
+os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
 
 import threading , queue
 import time
@@ -22,13 +22,26 @@ from cvzone.ColorModule import ColorFinder
 from action import *
 
 #%%
-class Car():
-    def __init__(self):
+class Car(threading.Thread):
+    instance = None
+    Car_flag = False
+    
+    def __init__(self,car_signal):
+        if Car.Car_flag:
+            return
+        self.car_signal = car_signal
+        threading.Thread.__init__(self)
         self.COM_PORT = 'COM4'
         self.baudRate = 9600
         self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
         print('初始化成功')
-        
+        Car.Car_flag = True
+            
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
     def forward(self):
         self.ser1.write(1)
         print('前進')
@@ -46,20 +59,29 @@ class Car():
         print('關閉')
         
     def run(self):
-        if car_signal.get() == 'stop':
+        if self.car_signal.get() == 'stop':
             print('car stop')
             self.stop()
             
-        elif car_signal.get()== 'move':
+        elif self.car_signal.get()== 'move':
             # motor_control(s,1)
             print('car move')
             self.forward()
         else:
             pass
 
-
-class Arm():
-    def __init__(self):
+#%%
+class Arm(threading.Thread):
+    instance = None
+    Arm_flag = False
+    
+    def __init__(self,car_signal,weed_signal):
+        if Arm.Arm_flag:
+            return
+        
+        self.car_signal = car_signal
+        self.weed_signal = weed_signal
+        
         self.actuID = [0x01, 0x02, 0x03, 0x04, 0x05]
         self.statusg = innfos.handshake()
         self.data = innfos.queryID(5)
@@ -70,7 +92,15 @@ class Arm():
         self.innfos.setpos(self.actuID, [0,0,0,0,0])
         time.sleep(1)
         print("手臂初始化完成")
+        Arm.Arm_flag = True
         
+        
+        
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+    
     def home(self):
         self.innfos.setpos(self.actuID, [0,0,0,0,0])
         time.sleep(1)
@@ -104,33 +134,50 @@ class Arm():
             mid = data[0]
             arm_loc = data[1]
 
+            if mid and arm_loc:
+                mid = (int(mid[0]),int(mid[1]))
+                sx = (arm_loc[0]-mid[0])**2
+                sy = (arm_loc[1]-mid[1])**2
+                now_dist = int(abs((sx-sy))**0.5)
+                
+            if now_dist <= 50:
+                #代表手臂在畫面上很靠近草
+                print("往下鑽")
+                time.sleep(2)
+                self.car_signal.put('move')
+                self.home()
+                self.mid = None
+                self.arm_loc = None
+
+            else:
             #控制左右
-            if self.a[0] > 0 :
-                self.a[0] = 0
-            elif self.a[0] < -18 :
-                self.a[0] = -18
-    
-            #控制上下
-            if self.a[1] > 10 :
-                self.a[1] = 10
-            elif self.a[1] <-8 :
-                self.a[1] = -8
-    
-            #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-            #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-            if mid[0] - arm_loc[0] <= 0:
-                self.a[0] = self.a[0]+0.5
-            else:
-                self.a[0] = self.a[0]-0.5
-            
-            #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-            #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-            
-            if mid[1] - arm_loc[1] >= 0:
-                self.a[1] = self.a[1]+0.5
-            else:
-                self.a[1] = self.a[1]-0.5
-            arm_move(self.a)
+                if self.a[0] > 0 :
+                    self.a[0] = 0
+                elif self.a[0] < -18 :
+                    self.a[0] = -18
+        
+                #控制上下
+                if self.a[1] > 10 :
+                    self.a[1] = 10
+                elif self.a[1] <-8 :
+                    self.a[1] = -8
+        
+                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                if mid[0] - arm_loc[0] <= 0:
+                    self.a[0] = self.a[0]+0.5
+                else:
+                    self.a[0] = self.a[0]-0.5
+                
+                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                
+                if mid[1] - arm_loc[1] >= 0:
+                    self.a[1] = self.a[1]+0.5
+                else:
+                    self.a[1] = self.a[1]-0.5
+                self.move(self.a)
+
 
 class Yolov5_Model():
     instance = None
@@ -153,20 +200,23 @@ class Yolov5_Model():
         if cls.instance is None:
             cls.instance = super().__new__(cls)
         return cls.instance
-
+#%%
 class Cam():
-    def __init__(self):
+    def __init__(self,car_signal,weed_signal):
+        
+        self.car_signal = car_signal
+        self.weed_signal = weed_signal
+        
         self.hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
         self.hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
-        # self.cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
-        self.path =r'C:\Users\Jason\Desktop\20220416\IMG_9073.MOV'
-        self.cap = cv2.VideoCapture(self.path)
-        # self.cap = cv2.VideoCapture(0)
+        
+        self.cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
         self.model = Yolov5_Model()
         self.myColorFinder = ColorFinder()
 
         self.arm_loc = None
         self.mid = None
+
 
     def run(self):
         while self.cap.isOpened:
@@ -213,9 +263,9 @@ class Cam():
                 pass
             
             if self.mid and self.arm_loc:
-                car_signal.put('stop')
-                if weed_signal.qsize() < 1:
-                    weed_signal.put((self.mid,self.arm_loc))
+                self.car_signal.put('stop')
+                if self.weed_signal.qsize() < 1:
+                    self.weed_signal.put((self.mid,self.arm_loc))
                     
             cv2.imshow("frame", self.frame)
             cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
@@ -229,6 +279,7 @@ class Cam():
         self.cap.release()
         sys.exit()
         
+        #%%
 def worker(arm):
     while True:
         case = 0
@@ -266,10 +317,8 @@ def worker(arm):
 
 
 def main():
-    myColorFinder = ColorFinder()
     car = Car()
     arm = Arm()
-    model = Yolov5_Model()
     cam = Cam()
 
     # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
