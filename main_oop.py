@@ -59,16 +59,37 @@ class Car(threading.Thread):
         print('關閉')
         
     def run(self):
-        if self.car_signal.get() == 'stop':
-            print('car stop')
-            self.stop()
+        while 1 :
+            job = car_signal.get()
+            print(f'Working on {job}')
+
+            if job == 'stop':
+                print('car stop')
+                self.stop()
+                
+            elif job == 'move':
+                print('car move')
+                self.forward()
+                
+            elif job == 'q':
+                self.close()
+                print('Ending the car')
+                break
+            print(f'Finished {job}')
+            car_signal.task_done()
             
-        elif self.car_signal.get()== 'move':
-            # motor_control(s,1)
-            print('car move')
-            self.forward()
-        else:
-            pass
+#測試用
+# car_signal = queue.Queue()
+# car_signal.empty()
+# c =Car(car_signal)
+# c.start()
+# c.isAlive()
+# c.close()
+
+# car_signal.put('move')
+# car_signal.put('stop')
+# car_signal.put('q')
+
 
 #%%
 class Arm(threading.Thread):
@@ -93,7 +114,6 @@ class Arm(threading.Thread):
         time.sleep(1)
         print("手臂初始化完成")
         Arm.Arm_flag = True
-        
         
         
     def __new__(cls, *args, **kwargs):
@@ -128,12 +148,16 @@ class Arm(threading.Thread):
     def arm_set_limitpos(self):
         self.innfos.poslimit(self.actuID,[15,-15],[15,-15])
     
-    def moving(self):
-        if weed_signal.get():
-            data = weed_signal.get()
-            mid = data[0]
-            arm_loc = data[1]
+    def run(self):
+        
+        while 1:
+            job = self.weed_signal.get()
+            print(f'Working on {job}')
 
+            if job:
+                mid = data[0]
+                arm_loc = data[1]
+                
             if mid and arm_loc:
                 mid = (int(mid[0]),int(mid[1]))
                 sx = (arm_loc[0]-mid[0])**2
@@ -177,6 +201,9 @@ class Arm(threading.Thread):
                 else:
                     self.a[1] = self.a[1]-0.5
                 self.move(self.a)
+                
+            print(f'Finished {job}')
+            self.weed_signal.task_done()
 
 
 class Yolov5_Model():
@@ -226,6 +253,7 @@ class Cam():
             cv2.imshow("frame", self.frame)
 
             imgColor_g,mask_g = self.myColorFinder.update(self.frame,self.hsvVals_g)
+            
             #抓取出區域輪廓以及中心點 cvzone.findContours
             imgContour_g,contours_g = cvzone.findContours(self.frame, mask_g,minArea=500)
             imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
@@ -234,7 +262,6 @@ class Cam():
                 self.mid = contours_g[0]['center']
             else:
                 self.mid = None
-                
             try:
                 if self.data.name.any():
                     if self.pandas().xyxy[0].name[0] == 'arm':
@@ -278,123 +305,19 @@ class Cam():
         cv2.destroyAllWindows()
         self.cap.release()
         sys.exit()
-        
-        #%%
-def worker(arm):
-    while True:
-        case = 0
-        mid_data = weed_signal.get()
-        mid = mid_data[0]
-        arm_loc = mid_data[1]
-        # print(f"mid = {mid}" )
-        # print(f"arm_loc = {arm_loc}" )
-        
-        if mid and arm_loc:
-            mid = (int(mid[0]),int(mid[1]))
-            sx = (arm_loc[0]-mid[0])**2
-            sy = (arm_loc[1]-mid[1])**2
-            now_dist = int(abs((sx-sy))**0.5)
-            
-        if now_dist <= 50:
-            #代表手臂在畫面上很靠近草
-            case = 1
-        print(f"case = {case}" )
-        
-        if case == 0:
-            #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-            try:
-                arm.moving(mid,arm_loc)
-            except:
-                pass
-            
-        elif case == 1:
-            print("往下鑽")
-            car_signal.put('move')
-            n = 0
-            main_signal.put(n)
-            case = 0
-
-
 
 def main():
-    car = Car()
-    arm = Arm()
-    cam = Cam()
+    weed_signal = queue.Queue()
+    car_signal = queue.Queue()
 
-    # cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-    cap = cv2.VideoCapture(0)
-    while cap.isOpened:
-        _, frame = cap.read()
-        cv2.imshow("frame", frame)
-        results_roi = model.predict(frame)
-        data = results_roi.pandas().xyxy[0]
+    car = Car(car_signal)
+    arm = Arm(car_signal,weed_signal)
+    cam = Cam(car_signal,weed_signal)
 
-        try:
-            if data.name.any():
-                if results_roi.pandas().xyxy[0].name[0] == 'arm':
-                    data = results_roi.pandas().xyxy[0]
-                    arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
-                    arm_loc = [int(arm_loc[0]),int(arm_loc[1])]
-                else:
-                    arm_loc = None
-                
-                if results_roi.pandas().xyxy[0].name[0] == 'grass':
-                    mid = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
-                else:
-                    mid = None
-            else:
-                arm_loc = None
-        except:
-            pass
+    car.start()
+    arm.start()
+    cam.run()
 
+if __name__=="__main__":
+    main()
 
-        imgColor_g,mask_g = myColorFinder.update(frame,cam.hsvVals_g)
-        #抓取出區域輪廓以及中心點 cvzone.findContours
-        imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
-        imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
-
-        if contours_g:
-            mid = contours_g[0]['center']
-        else:
-            mid = None
-            
-        if n == 0:
-            temp = mid
-            n = 1      
-            
-        try:
-            cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
-            cv2.circle(frame,(int(temp[0]),int(temp[1])), 8, (0, 0, 255), -1)
-            
-            car_signal.put('stop')
-            if weed_signal.qsize() < 1:
-                weed_signal.put((temp,arm_loc))
-        except:
-            pass
-
-        cv2.imshow("frame", frame)
-        cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
-        cv2.imshow("img_all",imgStack_all)
-        
-        k = cv2.waitKey(1) & 0xFF
-        if k == 27:
-            arm_home()
-            time.sleep(2)
-            arm_exit()
-            break
-
-    cv2.destroyAllWindows()
-    cap.release()
-    sys.exit()
-
-# if __name__=="__main__":
-
-#     main()
-weed_signal = queue.Queue()
-car_signal = queue.Queue()
-
-#     t_car = threading.Thread(target=worker, daemon=True)
-#     t.start()
-#     t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
-#     t1.start()
-    
