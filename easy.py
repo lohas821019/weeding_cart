@@ -141,11 +141,9 @@ arm_home()
 first = 1
 
 #step1
-# task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
 while 1:
-    task_done = False
     _, frame = cap.read()
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
@@ -160,7 +158,6 @@ while 1:
         else:
             arm_loc = None
 
-    
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
     #抓取出區域輪廓以及中心點 cvzone.findContours
@@ -239,17 +236,15 @@ while 1:
                     a[1] = a[1]+0.5
                 else:
                     a[1] = a[1]-0.5
-
             except:
                 pass
 
         elif case == 1:
             print("往下鑽")
-            # time.sleep(2)
+            time.sleep(2)
             arm_home()
             mid = None
             arm_loc = None
-            task_done =True
             case = 0
             a = [-18,0,0,0,0]
 
@@ -277,9 +272,6 @@ while 1:
         time.sleep(2)
         arm_exit()
         break
-    
-    if task_done == True:
-        continue
 
 cv2.destroyAllWindows()
 cap.release()

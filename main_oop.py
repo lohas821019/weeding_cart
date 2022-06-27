@@ -22,7 +22,7 @@ from cvzone.ColorModule import ColorFinder
 from action import *
 
 #%%
-class Car(threading.Thread):
+class Car():
     instance = None
     Car_flag = False
     
@@ -30,7 +30,7 @@ class Car(threading.Thread):
         if Car.Car_flag:
             return
         self.car_signal = car_signal
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         self.COM_PORT = 'COM3'
         self.baudRate = 9600
         self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
@@ -58,25 +58,25 @@ class Car(threading.Thread):
         self.ser1.close()
         print('關閉')
         
-    def run(self):
-        while 1 :
-            job = self.car_signal.get()
-            # print(f'Working on {job}')
+    # def run(self):
+    #     while 1 :
+    #         job = self.car_signal.get()
+    #         # print(f'Working on {job}')
 
-            if job == 'stop':
-                # print('car stop')
-                self.stop()
+    #         if job == 'stop':
+    #             # print('car stop')
+    #             self.stop()
                 
-            elif job == 'move':
-                # print('car move')
-                self.forward()
+    #         elif job == 'move':
+    #             # print('car move')
+    #             self.forward()
                 
-            elif job == 'q':
-                self.close()
-                # print('Ending the car')
-                break
-            # print(f'Finished {job}')
-            self.car_signal.task_done()
+    #         elif job == 'q':
+    #             self.close()
+    #             # print('Ending the car')
+    #             break
+    #         # print(f'Finished {job}')
+    #         self.car_signal.task_done()
             
 #測試用
 # car_signal = queue.Queue()
@@ -92,14 +92,14 @@ class Car(threading.Thread):
 
 
 #%%
-class Arm(threading.Thread):
+class Arm():
     instance = None
     Arm_flag = False
     
     def __init__(self,car_signal,weed_signal,arm_signal):
         if Arm.Arm_flag:
             return
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
     
         self.car_signal = car_signal
         self.weed_signal = weed_signal
@@ -149,68 +149,7 @@ class Arm(threading.Thread):
     
     def arm_set_limitpos(self):
         innfos.poslimit(self.actuID,[15,-15],[15,-15])
-    
-    
-    def run(self):
-        while 1 :
-            mid,arm_loc= self.weed_signal.get()                            
-            print(f'mid = {mid}')
-            print(f'arm_loc = {arm_loc}')
-            
-            sx = pow(abs((arm_loc[0]-mid[0])),2)
-            sy = pow(abs((arm_loc[1]-mid[1])),2)
-            now_dist = int(abs((sx-sy))**0.5)
-            print(f'now_dist = {now_dist}')
 
-            if now_dist <= 50:
-                #代表手臂在畫面上很靠近草
-                print("往下鑽")
-                time.sleep(2)
-                self.car_signal.put('move')
-                self.home()
-                # self.mid = None
-                # self.arm_loc = None
-            
-            else:
-            #控制左右
-                if self.a[0] > 0 :
-                    self.a[0] = 0
-                elif self.a[0] < -18 :
-                    self.a[0] = -18
-            
-                #控制上下
-                if self.a[1] > 10 :
-                    self.a[1] = 10
-                elif self.a[1] <-8 :
-                    self.a[1] = -8
-            
-                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                if mid[0] - arm_loc[0] <= 0:
-                    self.a[0] = self.a[0]+0.5
-                else:
-                    self.a[0] = self.a[0]-0.5
-                
-                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                
-                if mid[1] - arm_loc[1] >= 0:
-                    self.a[1] = self.a[1]+0.5
-                else:
-                    self.a[1] = self.a[1]-0.5
-                self.move(self.a)
-            
-            # job_stop = self.arm_signal.get()
-            
-            # if job_stop == 'q':
-            #     self.home()
-            #     time.sleep(2)
-            #     self.arm_exit()
-            #     self.arm_signal.task_done()
-            
-            self.weed_signal.task_done()
-            
-        
 class Yolov5_Model():
     instance = None
     model_flag = False
@@ -234,12 +173,13 @@ class Yolov5_Model():
         return cls.instance
 #%%
 class Cam():
-    def __init__(self,car_signal,weed_signal,arm_signal):
+    def __init__(self,car,arm):
+        self.car = car
+        self.arm = arm
         
-        self.car_signal = car_signal
-        self.weed_signal = weed_signal
-        self.arm_signal = arm_signal
-
+        self.car_falg = 1
+        self.arm_falg = 1
+        
         self.hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
         self.hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
         
@@ -304,10 +244,59 @@ class Cam():
             # self.arm_loc =[200,200]
             
             if self.mid and self.arm_loc:
-                # self.car_signal.put('stop')
-                if self.weed_signal.qsize() < 1:
-                    self.weed_signal.put((self.mid,self.arm_loc))
-                # print((self.mid,self.arm_loc))
+                if self.car_falg:
+                    self.car.stop()
+                    
+                if self.arm_falg:
+                    self.home()
+
+                print(f'mid = {self.mid}')
+                print(f'arm_loc = {self.arm_loc}')
+                
+                sx = pow(abs((self.arm_loc[0]-self.mid[0])),2)
+                sy = pow(abs((self.arm_loc[1]-self.mid[1])),2)
+                self.now_dist = int(abs((sx-sy))**0.5)
+                print(f'now_dist = {self.now_dist}')
+
+            if self.now_dist <= 50:
+                #代表手臂在畫面上很靠近草
+                print("往下鑽")
+                self.home()
+                self.a = [-18,0,0,0,0]
+                self.mid = None
+                self.arm_loc = None
+                self.car_falg = 0
+                self.arm_falg = 0
+                self.car.forward()
+            
+            else:
+            #控制左右
+                if self.a[0] > 0 :
+                    self.a[0] = 0
+             #控制上下
+                if self.a[1] > 10 :
+                    self.a[1] = 10
+                elif self.a[0] < -18 :
+                    self.a[0] = -18
+            
+                elif self.a[1] <-8 :
+                    self.a[1] = -8
+            
+                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                if mid[0] - arm_loc[0] <= 0:
+                    self.a[0] = self.a[0]+0.5
+                else:
+                    self.a[0] = self.a[0]-0.5
+                
+                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                
+                if mid[1] - arm_loc[1] >= 0:
+                    self.a[1] = self.a[1]+0.5
+                else:
+                    self.a[1] = self.a[1]-0.5
+                self.move(self.a)
 
             cv2.imshow("frame", self.frame)
             cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
@@ -315,29 +304,27 @@ class Cam():
             
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
-                self.car_signal.put('q')
-                self.arm_signal.put('q')
                 break
 
         cv2.destroyAllWindows()
         self.cap.release()
+        self.car.close()
+        self.arm.close()
+        
         sys.exit()
 
 #%%
 def main():
     
-    weed_signal = queue.Queue()
-    car_signal = queue.Queue()
-    arm_signal = queue.Queue()
+    # weed_signal = queue.Queue()
+    # car_signal = queue.Queue()
+    # arm_signal = queue.Queue()
 
-    car = Car(car_signal)
-    arm = Arm(car_signal,weed_signal,arm_signal)
-    cam = Cam(car_signal,weed_signal,arm_signal)
-
-    car.start()
-    arm.start()
+    car = Car()
+    arm = Arm()
+    cam = Cam(car,arm)
     cam.run()
-    
+
 
 if __name__=="__main__":
     main()
