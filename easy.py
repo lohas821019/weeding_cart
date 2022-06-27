@@ -34,10 +34,10 @@ if get_model_label:
     get_model_label = False
 
 #車子馬達初始化
-try:
-    s = motor_init()
-except:
-    s.close()
+# try:
+#     s = motor_init()
+# except:
+#     s.close()
 
 #機械手臂參數設定，手臂初始位置
 global a
@@ -62,7 +62,7 @@ def worker():
             sy = (arm_loc[1]-mid[1])**2
             now_dist = int(abs((sx-sy))**0.5)
             
-        if now_dist <= 30:
+        if now_dist <= 40:
             #代表手臂在畫面上很靠近草
             case = 1
         print(f"case = {case}" )
@@ -141,9 +141,11 @@ arm_home()
 first = 1
 
 #step1
+# task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
 while 1:
+    task_done = False
     _, frame = cap.read()
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
@@ -153,11 +155,11 @@ while 1:
         if results_roi.pandas().xyxy[0].name[0] == 'arm':
             data = results_roi.pandas().xyxy[0]
             arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
-            if len(arm_loc) == 2:
-                arm_loc = [int(arm_loc[0]),int(arm_loc[1])]
+            arm_loc = [int(arm_loc[0][0]),int(arm_loc[1][0])]
         else:
             arm_loc = None
 
+    
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
     #抓取出區域輪廓以及中心點 cvzone.findContours
@@ -203,7 +205,7 @@ while 1:
         data1.append(now_dist)
         print(f'data1 = {data1}')
 
-        if now_dist >= 50:
+        if now_dist >= 40:
             case = 0
         else:
             case = 1
@@ -226,27 +228,30 @@ while 1:
                 #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
                 #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
                 if mid[0] - arm_loc[0] <= 0:
-                    a[0] = a[0]+0.5
+                    a[0] = a[0]+0.1
                 else:
-                    a[0] = a[0]-0.5
+                    a[0] = a[0]-0.1
                     
                 #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
                 #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
                 if mid[1] - arm_loc[1] >= 0:
-                    a[1] = a[1]+0.5
+                    a[1] = a[1]+0.1
                 else:
-                    a[1] = a[1]-0.5
+                    a[1] = a[1]-0.1
+
             except:
                 pass
 
         elif case == 1:
             print("往下鑽")
+            arm_move([-15.599999999999975, -7.19999999999999, -7, 0, 0])
             time.sleep(2)
             arm_home()
+            a = [-18,0,0,0,0]
             mid = None
             arm_loc = None
+            task_done =True
             case = 0
-            a = [-18,0,0,0,0]
 
         if n>=5:
             for i in range(0,len(data1)-5+1):
@@ -255,11 +260,12 @@ while 1:
                 print(f'mid_value = {mid_value}')
                 print(f'summary = {summary}')
                 
+                arm_move(a)
+                print(f'arm_move(a) = {a}')
+
                 if mid_value*5 - summary<=5:
                     n = 0
                     data = []
-                    arm_move(a)
-                    print(f'arm_move(a) = {a}')
             first = 1
 
     #如果沒有抓到草
@@ -269,9 +275,11 @@ while 1:
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
         arm_home()
-        time.sleep(2)
-        arm_exit()
+
         break
+    
+    if task_done == True:
+        continue
 
 cv2.destroyAllWindows()
 cap.release()

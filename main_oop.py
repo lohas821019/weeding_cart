@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun 20 09:42:38 2022
-
 @author: Jason
 """
 import os
@@ -26,15 +25,14 @@ class Car():
     instance = None
     Car_flag = False
     
-    def __init__(self,car_signal):
+    def __init__(self):
         if Car.Car_flag:
             return
-        self.car_signal = car_signal
         # threading.Thread.__init__(self)
         self.COM_PORT = 'COM3'
         self.baudRate = 9600
         self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
-        print('初始化成功')
+        print('車輛初始化成功')
         Car.Car_flag = True
             
     def __new__(cls, *args, **kwargs):
@@ -44,19 +42,19 @@ class Car():
 
     def forward(self):
         self.ser1.write(1)
-        print('前進')
+        print('車輛前進')
         
     def backward(self):
         self.ser1.write(2)
-        print('後退')
+        print('車輛後退')
         
     def stop(self):
         self.ser1.write(0)
-        print('停止')
+        print('車輛停止')
 
     def close(self):
         self.ser1.close()
-        print('關閉')
+        print('車輛關閉')
         
     # def run(self):
     #     while 1 :
@@ -96,14 +94,11 @@ class Arm():
     instance = None
     Arm_flag = False
     
-    def __init__(self,car_signal,weed_signal,arm_signal):
+    def __init__(self):
         if Arm.Arm_flag:
             return
         # threading.Thread.__init__(self)
     
-        self.car_signal = car_signal
-        self.weed_signal = weed_signal
-        self.arm_signal = arm_signal
         
         self.actuID = [0x01, 0x02, 0x03, 0x04, 0x05]
         self.statusg = innfos.handshake()
@@ -125,12 +120,12 @@ class Arm():
     
     def home(self):
         innfos.setpos(self.actuID, [0,0,0,0,0])
-        time.sleep(1)
+        time.sleep(2)
         print("手臂回家")
     
     def move(self,pos):
         innfos.setpos(self.actuID, pos)
-        time.sleep(1)
+        time.sleep(2)
         print("手臂移動")
         
     def arm_exit(self):
@@ -243,60 +238,64 @@ class Cam():
             # self.mid =[100,100]
             # self.arm_loc =[200,200]
             
-            if self.mid and self.arm_loc:
-                if self.car_falg:
-                    self.car.stop()
+            try:
+                if self.mid and self.arm_loc and len(self.arm_loc) == 2:
+                    if self.car_falg:
+                        self.car.stop()
+                        self.car_falg = 0
+                    # if self.arm_falg:
+                    #     self.arm.home()
+    
+                    print(f'mid = {self.mid}')
+                    print(f'arm_loc = {self.arm_loc}')
                     
-                if self.arm_falg:
-                    self.home()
+                    sx = pow(abs((self.arm_loc[0]-self.mid[0])),2)
+                    sy = pow(abs((self.arm_loc[1]-self.mid[1])),2)
+                    self.now_dist = int(abs((sx-sy))**0.5)
+                    print(f'now_dist = {self.now_dist}')
+    
+                    if self.now_dist <= 40:
+                        #代表手臂在畫面上很靠近草
+                        print("往下鑽")
+                        self.arm.move([-15.599999999999975, -7.19999999999999, -7, 0, 0])
+                        self.arm.home()
+                        self.arm.a = [-18,0,0,0,0]
+                        self.mid = None
+                        self.arm_loc = None
+                        self.car_falg = 1
+                        self.car.forward()
+                
+                    else:
+                    #控制左右
+                        if self.arm.a[0] > 0 :
+                            self.arm.a[0] = 0
+                     #控制上下
+                        if self.arm.a[1] > 10 :
+                            self.arm.a[1] = 10
+                        elif self.arm.a[0] < -18 :
+                            self.arm.a[0] = -18
+                    
+                        elif self.arm.a[1] <-8 :
+                            self.arm.a[1] = -8
+                    
+                        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                        if self.mid[0] - self.arm_loc[0] <= 0:
+                            self.arm.a[0] = self.arm.a[0]+0.5
+                        else:
+                            self.arm.a[0] = self.arm.a[0]-0.5
+                        
+                        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                        
+                        if self.mid[1] - self.arm_loc[1] >= 0:
+                            self.arm.a[1] = self.arm.a[1]+0.5
+                        else:
+                            self.arm.a[1] = self.arm.a[1]-0.5
+                        self.arm.move(self.arm.a)
 
-                print(f'mid = {self.mid}')
-                print(f'arm_loc = {self.arm_loc}')
-                
-                sx = pow(abs((self.arm_loc[0]-self.mid[0])),2)
-                sy = pow(abs((self.arm_loc[1]-self.mid[1])),2)
-                self.now_dist = int(abs((sx-sy))**0.5)
-                print(f'now_dist = {self.now_dist}')
-
-            if self.now_dist <= 50:
-                #代表手臂在畫面上很靠近草
-                print("往下鑽")
-                self.home()
-                self.a = [-18,0,0,0,0]
-                self.mid = None
-                self.arm_loc = None
-                self.car_falg = 0
-                self.arm_falg = 0
-                self.car.forward()
-            
-            else:
-            #控制左右
-                if self.a[0] > 0 :
-                    self.a[0] = 0
-             #控制上下
-                if self.a[1] > 10 :
-                    self.a[1] = 10
-                elif self.a[0] < -18 :
-                    self.a[0] = -18
-            
-                elif self.a[1] <-8 :
-                    self.a[1] = -8
-            
-                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                if mid[0] - arm_loc[0] <= 0:
-                    self.a[0] = self.a[0]+0.5
-                else:
-                    self.a[0] = self.a[0]-0.5
-                
-                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                
-                if mid[1] - arm_loc[1] >= 0:
-                    self.a[1] = self.a[1]+0.5
-                else:
-                    self.a[1] = self.a[1]-0.5
-                self.move(self.a)
+            except:
+                pass
 
             cv2.imshow("frame", self.frame)
             cv2.namedWindow('img_all', cv2.WINDOW_AUTOSIZE)
@@ -304,12 +303,14 @@ class Cam():
             
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
+                self.arm.home()
+
                 break
 
         cv2.destroyAllWindows()
         self.cap.release()
         self.car.close()
-        self.arm.close()
+        self.arm.arm_exit()
         
         sys.exit()
 
@@ -328,4 +329,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
