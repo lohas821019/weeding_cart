@@ -138,7 +138,7 @@ ans = arm_init()
 arm_home()
 
 
-first =1
+first = 1
 
 #step1
 # task_done = False
@@ -150,16 +150,16 @@ while 1:
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
-    try:
-        if data.name.any():
-            if results_roi.pandas().xyxy[0].name[0] == 'arm':
-                data = results_roi.pandas().xyxy[0]
-                arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+
+    if data.name.any():
+        if results_roi.pandas().xyxy[0].name[0] == 'arm':
+            data = results_roi.pandas().xyxy[0]
+            arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
+            if len(arm_loc) == 2:
                 arm_loc = [int(arm_loc[0]),int(arm_loc[1])]
-            else:
-                arm_loc = None
-    except:
-        pass
+        else:
+            arm_loc = None
+
     
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
@@ -181,32 +181,30 @@ while 1:
         pass
     cv2.waitKey(1)
     cv2.imshow('frame', frame)
+    
+    print('===========================================')
+    print(f"mid = {mid}")
+    print(f"arm_loc = {arm_loc}")
+    
 
 #step2
     #如果有抓到草
     if mid and arm_loc:
-        print('車子停止，除草')
         #計算手臂與雜草距離
-        mid = (int(mid[0]),int(mid[1]))
-        sx = (arm_loc[0]-mid[0])**2
-        sy = (arm_loc[1]-mid[1])**2
+        sx = pow(abs((arm_loc[0]-mid[0])),2)
+        sy = pow(abs((arm_loc[1]-mid[1])),2)
         now_dist = int(abs((sx-sy))**0.5)
-        
+        print(f'now_dist = {now_dist}')
+
         if first:
             n = 0
-            data = []
+            data1 = []
             first = 0
         n = n + 1
-        data.append(now_dist)
+        print(f'n = {n}')
 
-        if n>=5:
-            for i in range(0,len(data)-5+1):
-                mid_value = data[i+3]
-                summary = sum(data[i:i+5])
-                if mid_value*5 - summary<=5:
-                    arm_move(a)
-                    n = 0
-                    data = []
+        data1.append(now_dist)
+        print(f'data1 = {data1}')
 
         if now_dist >= 50:
             case = 0
@@ -241,8 +239,7 @@ while 1:
                     a[1] = a[1]+0.5
                 else:
                     a[1] = a[1]-0.5
-                # arm_move(a)
-                # print('動完')
+
             except:
                 pass
 
@@ -256,9 +253,20 @@ while 1:
             case = 0
             a = [-18,0,0,0,0]
 
-        cv2.waitKey(1)
-        cv2.imshow('frame1', frame)
-        
+        if n>=5:
+            for i in range(0,len(data1)-5+1):
+                mid_value = data1[i+3]
+                summary = sum(data1[i:i+5])
+                print(f'mid_value = {mid_value}')
+                print(f'summary = {summary}')
+                
+                if mid_value*5 - summary<=5:
+                    n = 0
+                    data = []
+                    arm_move(a)
+                    print(f'arm_move(a) = {a}')
+            first = 1
+
     #如果沒有抓到草
     else:
         print('車子行進')
@@ -276,6 +284,7 @@ while 1:
 cv2.destroyAllWindows()
 cap.release()
 arm_exit()
+
 time.sleep(2)
 sys.exit()
 
