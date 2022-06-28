@@ -199,75 +199,77 @@ while 1:
             n = 0
             data1 = []
             first = 0
-        n = n + 1
-        print(f'n = {n}')
 
-        data1.append(now_dist)
-        print(f'data1 = {data1}')
+        if now_dist!=0:
+            n = n + 1
+            print(f'n = {n}')
+            data1.append(now_dist)
+            print(f'data1 = {data1}')
 
         if now_dist >= 40:
             case = 0
         else:
             case = 1
 
-        if case == 0:
-            #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-            try:
-                #控制左右
-                if a[0] > 0 :
-                    a[0] = 0
-                elif a[0] < -18 :
-                    a[0] = -18
-                    
-                #控制上下
-                if a[1] > 10 :
-                    a[1] = 10
-                elif a[1] <-8 :
-                    a[1] = -8
-
-                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                if mid[0] - arm_loc[0] <= 0:
-                    a[0] = a[0]+0.1
-                else:
-                    a[0] = a[0]-0.1
-                    
-                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                if mid[1] - arm_loc[1] >= 0:
-                    a[1] = a[1]+0.1
-                else:
-                    a[1] = a[1]-0.1
-
-            except:
-                pass
-
-        elif case == 1:
-            print("往下鑽")
-            arm_move([-15.599999999999975, -7.19999999999999, -7, 0, 0])
-            time.sleep(2)
-            arm_home()
-            a = [-18,0,0,0,0]
-            mid = None
-            arm_loc = None
-            task_done =True
-            case = 0
-
-        if n>=5:
-            for i in range(0,len(data1)-5+1):
-                mid_value = data1[i+3]
-                summary = sum(data1[i:i+5])
-                print(f'mid_value = {mid_value}')
-                print(f'summary = {summary}')
-                
+        if n==10:
+            if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
+     
                 arm_move(a)
                 print(f'arm_move(a) = {a}')
+                n = 0
+                first = 1
+                
+                if case == 0:
+                    #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
+                    try:
+                        #控制左右
+                        if a[0] > 0 :
+                            a[0] = 0
+                        elif a[0] < -18 :
+                            a[0] = -18
+                            
+                        #控制上下
+                        if a[1] > 10 :
+                            a[1] = 10
+                        elif a[1] <-8 :
+                            a[1] = -8
 
-                if mid_value*5 - summary<=5:
-                    n = 0
-                    data = []
-            first = 1
+                        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                        if mid[0] - arm_loc[0] <= 0:
+                            a[0] = a[0]+0.5
+                        else:
+                            a[0] = a[0]-0.5
+                            
+                        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                        if mid[1] - arm_loc[1] >= 0:
+                            a[1] = a[1]+0.5
+                        else:
+                            a[1] = a[1]-0.5
 
+                    except:
+                        pass
+
+                elif case == 1:
+                    print("往下鑽")
+                    nowpos = innfos.readpos(actuID)
+                    print(f'nowpos = {nowpos}')
+                    arm_move([nowpos[0], nowpos[1], -7, 0, 0])
+                    time.sleep(3)
+                    arm_home()
+                    a = [-18,0,0,0,0]
+                    mid = None
+                    arm_loc = None
+                    task_done =True
+                    case = 0
+                
+                
+        elif n>10:
+            n = 0
+            first = 1      
+
+                
     #如果沒有抓到草
     else:
         print('車子行進')
