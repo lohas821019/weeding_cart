@@ -39,6 +39,7 @@ if get_model_label:
 # except:
 #     s.close()
 
+
 #機械手臂參數設定，手臂初始位置
 global a
 # a = [0, -12, -15, -15, 0]
@@ -46,90 +47,6 @@ a = [-18,0,0,0,0]
 
 # 手臂motor1={"max":10,"min":-18}
 # 手臂motor2={"max":10,"min":-8}
-def worker():
-    while True:
-        case = 0
-        mid_data = weed_signal.get()
-        # weed_signal.task_done()
-        mid = mid_data[0]
-        arm_loc = mid_data[1]
-        # print(f"mid = {mid}" )
-        # print(f"arm_loc = {arm_loc}" )
-        
-        if mid and arm_loc:
-            mid = (int(mid[0]),int(mid[1]))
-            sx = (arm_loc[0]-mid[0])**2
-            sy = (arm_loc[1]-mid[1])**2
-            now_dist = int(abs((sx-sy))**0.5)
-            
-        if now_dist <= 40:
-            #代表手臂在畫面上很靠近草
-            case = 1
-        print(f"case = {case}" )
-        
-        if case == 0:
-            #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-            try:
-                #控制左右
-                if a[0] > 0 :
-                    a[0] = 0
-                elif a[0] < -18 :
-                    a[0] = -18
-    
-                #控制上下
-                if a[1] > 10 :
-                    a[1] = 10
-                elif a[1] <-8 :
-                    a[1] = -8
-    
-                #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                if mid[0] - arm_loc[0] <= 0:
-                    a[0] = a[0]+0.5
-                else:
-                    a[0] = a[0]-0.5
-                
-                #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                
-                if mid[1] - arm_loc[1] >= 0:
-                    a[1] = a[1]+0.5
-                else:
-                    a[1] = a[1]-0.5
-                    
-                arm_move(a)
-            
-            except:
-                pass
-            
-        elif case == 1:
-            print("往下鑽")
-            car_signal.put('move')
-            global n
-            n = 0
-            case = 0
-
-#無人車行進設定
-def car_moving(s):
-    #如果quene收到'stop' 則停止，如果quene收到'move'，則車子移動
-    if car_signal.get() == 'stop':
-        print('car stop')
-        # motor_control(s,0)
-    elif car_signal.get()== 'move':
-        # motor_control(s,1)
-        print('car move')
-    else:
-        pass
-
-
-#Queue初始化宣告
-# weed_signal = queue.Queue()
-# car_signal = queue.Queue()
-
-# t = threading.Thread(target=worker, daemon=True)
-# t.start()
-# t1 = threading.Thread(target=car_moving,args=(s,), daemon=True)
-# t1.start()
 
 #%%
 
@@ -137,16 +54,13 @@ def car_moving(s):
 ans = arm_init()
 arm_home()
 
-
 first = 1
 
 #step1
-# task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 cap_web = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 
 while 1:
-    task_done = False
     _, frame = cap.read()
     results_roi = model(frame, size=640)  # includes NMS
     results_roi.pred
@@ -268,7 +182,7 @@ while 1:
                 print(f'arm_move(a) = {a}')
                 n = 0
                 first = 1
-                
+
                 if case == 0:
                     #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
                     try:
@@ -297,39 +211,63 @@ while 1:
                             a[1] = a[1]+0.5
                         else:
                             a[1] = a[1]-0.5
-
                     except:
                         pass
+                    
                 elif case == 1:
-                    print("往下鑽")
-                    nowpos = innfos.readpos(actuID)
-                    print(f'nowpos = {nowpos}')
-                    arm_move([nowpos[0], nowpos[1], -7, 0, 0])
-                    time.sleep(3)
-                    arm_home()
-                    a = [-18,0,0,0,0]
-                    mid = None
-                    arm_loc = None
-                    task_done =True
-                    case = 0
+                    try:
+                        #控制左右
+                        if a[0] > 0 :
+                            a[0] = 0
+                        elif a[0] < -18 :
+                            a[0] = -18
+                            
+                        #控制上下
+                        if a[1] > 10 :
+                            a[1] = 10
+                        elif a[1] <-8 :
+                            a[1] = -8
+
+                        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+                        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+                        if mid[0] - arm_loc[0] <= 0:
+                            a[0] = a[0]+0.5
+                        else:
+                            a[0] = a[0]-0.5
+                            
+                        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+                        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+                        if mid[1] - arm_loc[1] >= 0:
+                            a[1] = a[1]+0.5
+                        else:
+                            a[1] = a[1]-0.5
+                    except:
+                        pass
+                    
+                    if now_dist_web<=20:
+                        print("往下鑽")
+                        nowpos = innfos.readpos(actuID)
+                        print(f'nowpos = {nowpos}')
+                        # arm_move([nowpos[0], nowpos[1], -7, 0, 0])
+                        time.sleep(3)
+                        arm_home()
+                        a = [-18,0,0,0,0]
+                        mid = None
+                        arm_loc = None
+                        case = 0
 
         elif n>10:
             n = 0
-            first = 1      
+            first = 1
     #如果沒有抓到草
     else:
         print('車子行進')
-        
-
 
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
         arm_home()
-
         break
-    
-    if task_done == True:
-        continue
+
 
 cv2.destroyAllWindows()
 cap.release()
