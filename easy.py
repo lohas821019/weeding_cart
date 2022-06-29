@@ -143,6 +143,7 @@ first = 1
 #step1
 # task_done = False
 cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
+cap_web = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 
 while 1:
     task_done = False
@@ -151,6 +152,12 @@ while 1:
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
 
+    _, frame_web = cap_web.read()
+    results_roi_web = model(frame_web, size=640)
+    results_roi_web.pred
+    data_web = results_roi_web.pandas().xyxy[0]
+
+#%%
     if data.name.any():
         if results_roi.pandas().xyxy[0].name[0] == 'arm':
             data = results_roi.pandas().xyxy[0]
@@ -159,7 +166,16 @@ while 1:
         else:
             arm_loc = None
 
-    
+    if data_web.name.any():
+        if results_roi_web.pandas().xyxy[0].name[0] == 'arm':
+            data_web = results_roi_web.pandas().xyxy[0]
+            arm_loc_web = ((data_web.xmin + data_web.xmax)/2,(data_web.ymin + data_web.ymax)/2)
+            arm_loc_web = [int(arm_loc[0][0]),int(arm_loc[1][0])]
+        else:
+            arm_loc_web = None
+
+#%%
+
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     
     #抓取出區域輪廓以及中心點 cvzone.findContours
@@ -175,7 +191,6 @@ while 1:
     try:
         cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
         cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
-        # car_signal.put('stop')
     except:
         pass
     cv2.waitKey(1)
@@ -185,7 +200,33 @@ while 1:
     print(f"mid = {mid}")
     print(f"arm_loc = {arm_loc}")
     
+    #%%
+    
+    imgColor_g_web,mask_g_web = myColorFinder.update(frame_web,hsvVals_g)
+    
+    #抓取出區域輪廓以及中心點 cvzone.findContours
+    imgContour_g_web,contours_g_web = cvzone.findContours(frame_web, mask_g_web,minArea=500)
+    imgStack_all_web = cvzone.stackImages([ imgColor_g_web,imgColor_g_web],2,0.5)
 
+    if imgContour_g_web:
+        mid_web = contours_g_web[0]['center']
+    else:
+        mid_web = None
+
+    #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
+    try:
+        cv2.circle(frame_web,(int(arm_loc_web[0]),int(arm_loc_web[1])), 8, (0, 255, 255), -1)
+        cv2.circle(frame_web,(int(mid_web[0]),int(mid_web[1])), 8, (0, 0, 255), -1)
+    except:
+        pass
+    cv2.waitKey(1)
+    cv2.imshow('frame_web', frame_web)
+    
+    print('===========================================')
+    print(f"mid_web = {mid_web}")
+    print(f"arm_loc_web = {arm_loc_web}")
+    
+#%%
 #step2
     #如果有抓到草
     if mid and arm_loc:
@@ -194,6 +235,15 @@ while 1:
         sy = pow(abs((arm_loc[1]-mid[1])),2)
         now_dist = int(abs((sx-sy))**0.5)
         print(f'now_dist = {now_dist}')
+
+    if mid_web and arm_loc_web:
+        #計算手臂與雜草距離
+        sx = pow(abs((arm_loc_web[0]-mid_web[0])),2)
+        sy = pow(abs((arm_loc_web[1]-mid_web[1])),2)
+        now_dist_web = int(abs((sx-sy))**0.5)
+        print(f'now_dist_web = {now_dist_web}')
+
+#%%
 
         if first:
             n = 0
@@ -250,7 +300,6 @@ while 1:
 
                     except:
                         pass
-
                 elif case == 1:
                     print("往下鑽")
                     nowpos = innfos.readpos(actuID)
@@ -263,17 +312,16 @@ while 1:
                     arm_loc = None
                     task_done =True
                     case = 0
-                
-                
+
         elif n>10:
             n = 0
             first = 1      
-
-                
     #如果沒有抓到草
     else:
         print('車子行進')
         
+
+
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
         arm_home()
