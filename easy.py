@@ -39,7 +39,6 @@ if get_model_label:
 # except:
 #     s.close()
 
-
 #機械手臂參數設定，手臂初始位置
 global a
 # a = [0, -12, -15, -15, 0]
@@ -47,7 +46,68 @@ a = [-18,0,0,0,0]
 
 # 手臂motor1={"max":10,"min":-18}
 # 手臂motor2={"max":10,"min":-8}
+def arm_control1():
+                    #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
+    try:
+        #控制左右
+        if a[0] > 0 :
+            a[0] = 0
+        elif a[0] < -18 :
+            a[0] = -18
+            
+        #控制上下
+        if a[1] > 10 :
+            a[1] = 10
+        elif a[1] <-8 :
+            a[1] = -8
 
+        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+        if mid[0] - arm_loc[0] <= 0:
+            a[0] = a[0]+0.5
+        else:
+            a[0] = a[0]-0.5
+            
+        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+        if mid[1] - arm_loc[1] >= 0:
+            a[1] = a[1]+0.5
+        else:
+            a[1] = a[1]-0.5
+    except:
+        pass
+    
+def arm_control2():
+                    #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
+    try:
+        #控制左右
+        if a[0] > 0 :
+            a[0] = 0
+        elif a[0] < -18 :
+            a[0] = -18
+            
+        #控制上下
+        if a[1] > 10 :
+            a[1] = 10
+        elif a[1] <-8 :
+            a[1] = -8
+
+        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
+        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
+        if mid[0] - arm_loc[0] <= 0:
+            a[0] = a[0]+0.5
+        else:
+            a[0] = a[0]-0.5
+            
+        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
+        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
+        if mid[1] - arm_loc[1] >= 0:
+            a[1] = a[1]+0.5
+        else:
+            a[1] = a[1]-0.5
+    except:
+        pass
+    
 #%%
 
 #手臂初始化
@@ -184,66 +244,11 @@ while 1:
                 first = 1
 
                 if case == 0:
-                    #迴圈重複判斷讓手臂到定點，是否到定點由camera產生的arm_loc 看他有沒有落在weed圈選的範圍
-                    try:
-                        #控制左右
-                        if a[0] > 0 :
-                            a[0] = 0
-                        elif a[0] < -18 :
-                            a[0] = -18
-                            
-                        #控制上下
-                        if a[1] > 10 :
-                            a[1] = 10
-                        elif a[1] <-8 :
-                            a[1] = -8
-
-                        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                        if mid[0] - arm_loc[0] <= 0:
-                            a[0] = a[0]+0.5
-                        else:
-                            a[0] = a[0]-0.5
-                            
-                        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                        if mid[1] - arm_loc[1] >= 0:
-                            a[1] = a[1]+0.5
-                        else:
-                            a[1] = a[1]-0.5
-                    except:
-                        pass
+                    arm_control1()
                     
                 elif case == 1:
-                    try:
-                        #控制左右
-                        if a[0] > 0 :
-                            a[0] = 0
-                        elif a[0] < -18 :
-                            a[0] = -18
-                            
-                        #控制上下
-                        if a[1] > 10 :
-                            a[1] = 10
-                        elif a[1] <-8 :
-                            a[1] = -8
+                    arm_control2()
 
-                        #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
-                        #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
-                        if mid[0] - arm_loc[0] <= 0:
-                            a[0] = a[0]+0.5
-                        else:
-                            a[0] = a[0]-0.5
-                            
-                        #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
-                        #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-                        if mid[1] - arm_loc[1] >= 0:
-                            a[1] = a[1]+0.5
-                        else:
-                            a[1] = a[1]-0.5
-                    except:
-                        pass
-                    
                     if now_dist_web<=20:
                         print("往下鑽")
                         nowpos = innfos.readpos(actuID)
@@ -255,7 +260,6 @@ while 1:
                         mid = None
                         arm_loc = None
                         case = 0
-
         elif n>10:
             n = 0
             first = 1
@@ -267,7 +271,6 @@ while 1:
     if k == 27:
         arm_home()
         break
-
 
 cv2.destroyAllWindows()
 cap.release()
