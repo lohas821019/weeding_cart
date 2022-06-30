@@ -116,6 +116,11 @@ def arm_control2():
 ans = arm_init()
 arm_home()
 
+# try:
+#     s = motor_init()
+# except:
+#     s.close()
+
 first = 1
 
 #step1
@@ -143,7 +148,6 @@ while 1:
             cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
         else:
             arm_loc = None
-        
         print('===========================================')
         print(f"arm_loc = {arm_loc}")
 
@@ -153,20 +157,15 @@ while 1:
             arm_loc_web = ((data_web.xmin + data_web.xmax)/2,(data_web.ymin + data_web.ymax)/2)
             arm_loc_web = [int(arm_loc_web[0][0]),int(arm_loc_web[1][0])]
             cv2.circle(frame_web,(int(arm_loc_web[0]),int(arm_loc_web[1])), 8, (0, 255, 255), -1)
-
         else:
             arm_loc_web = None
         print('===========================================')
         print(f"arm_loc_web = {arm_loc_web}")
 
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
-    
-    #抓取出區域輪廓以及中心點 cvzone.findContours
     imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
     imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
 
-
-    #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
         if contours_g:
             mid = contours_g[0]['center']
@@ -176,15 +175,10 @@ while 1:
     except:
         pass
 
-    
     imgColor_g_web,mask_g_web = myColorFinder1.update(frame_web,hsvVals_g_web)
-    
-    #抓取出區域輪廓以及中心點 cvzone.findContours
     imgContour_g_web,contours_g_web = cvzone.findContours(frame_web, mask_g_web,minArea=500)
     imgStack_all_web = cvzone.stackImages([ imgColor_g_web,imgColor_g_web],2,0.5)
 
-
-    #將有判斷出來的雜草圈出，並且計算出中心點mid，並且用圓圈標出中心點
     try:
         if contours_g_web:
             mid_web = contours_g_web[0]['center']
@@ -194,66 +188,59 @@ while 1:
             
     except:
         pass
+    
     cv2.waitKey(1)
     cv2.imshow('frame', frame)
     cv2.imshow('frame_web', frame_web)
-    
-    # print('===========================================')
-    # print(f"mid_web = {mid_web}")
-    # print(f"arm_loc_web = {arm_loc_web}")
-    
+
 #%%
 #step2
-    #如果有抓到草
+    #如果有抓到草，車子停止
     if mid and arm_loc:
+        # motor_control(s,0)
+        
         #計算手臂與雜草距離
         sx = pow(abs((arm_loc[0]-mid[0])),2)
         sy = pow(abs((arm_loc[1]-mid[1])),2)
         now_dist = int(abs((sx-sy))**0.5)
         print(f'now_dist = {now_dist}')
-
-    try:
-        if mid_web and arm_loc_web:
-         #計算手臂與雜草距離
-         sx = pow(abs((arm_loc_web[0]-mid_web[0])),2)
-         sy = pow(abs((arm_loc_web[1]-mid_web[1])),2)
-         now_dist_web = int(abs((sx-sy))**0.5)
-         print(f'now_dist_web = {now_dist_web}')
-    except:
-         pass
-
-#%%
-
-    if first:
+        
+        try:
+            if mid_web and arm_loc_web:
+             #計算手臂與雜草距離
+             sx = pow(abs((arm_loc_web[0]-mid_web[0])),2)
+             sy = pow(abs((arm_loc_web[1]-mid_web[1])),2)
+             now_dist_web = int(abs((sx-sy))**0.5)
+             print(f'now_dist_web = {now_dist_web}')
+        except:
+             pass
+         
+        if first:
             n = 0
             data1 = []
             first = 0
-
-    if now_dist!=0:
+                
+        if now_dist!=0:
             n = n + 1
             print(f'n = {n}')
             data1.append(now_dist)
             print(f'data1 = {data1}')
-
-    if now_dist >= 40:
-        case = 0
-    else:
-        case = 1
-
-    if n==10:
+                
+        if now_dist >= 40:
+            case = 0
+        else:
+            case = 1
+            
+        if n==10:
             if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
-     
                 arm_move(a)
                 print(f'arm_move(a) = {a}')
                 n = 0
                 first = 1
-
                 if case == 0:
                     arm_control1()
-                    
                 elif case == 1:
                     arm_control2()
-                    
                     try:
                         if now_dist_web<=20:
                             print("往下鑽")
@@ -268,9 +255,12 @@ while 1:
                             case = 0
                     except:
                         pass
-    elif n>10:
-        first = 1
-    #如果沒有抓到草
+        elif n>10:
+            first = 1
+     #如果沒抓到草，車子移動
+    else:
+        # motor_control(s,1)
+        pass
 
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
