@@ -242,7 +242,7 @@ while 1:
                 elif case == 1:
                     arm_control2()
                     try:
-                        if now_dist_web<=20:
+                        if now_dist_web <= 20:
                             print("往下鑽")
                             nowpos = innfos.readpos(actuID)
                             print(f'nowpos = {nowpos}')
