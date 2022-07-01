@@ -25,7 +25,9 @@ import cv2
 import torch
 
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_grass_fix_best.pt', force_reload=True) 
+    # model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_grass_fix_best.pt', force_reload=True) 
+    model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_grass_fix_best.pt', source='local')
+
     model.eval()
     
     return model
