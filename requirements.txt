@@ -7,4 +7,3 @@ torchaudio
 pandas
 tqdm
 matplotlib
-seaborn
