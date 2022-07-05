@@ -158,7 +158,7 @@ def arm_control_by_red():
 ans = arm_init()
 arm_home()
 
-model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_grass_fix_best.pt', source='local')
+model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
 model.eval()
 
 # try:
