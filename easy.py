@@ -191,7 +191,7 @@ while 1:
     cv2.imshow('frame_web', frame_web)
     #%%
     
-    #尋找手臂的位置
+    #cam1尋找手臂的位置
     if data.name.any():
         if results_roi.pandas().xyxy[0].name[0] == 'arm':
             data = results_roi.pandas().xyxy[0]
@@ -200,8 +200,6 @@ while 1:
             cv2.circle(frame,(int(arm_loc[0]),int(arm_loc[1])), 8, (0, 255, 255), -1)
         else:
             arm_loc = None
-        print('===========================================')
-        print(f"arm_loc = {arm_loc}")
 
     # if data_web.name.any():
     #     if results_roi_web.pandas().xyxy[0].name[0] == 'arm':
@@ -214,7 +212,7 @@ while 1:
     #     print('===========================================')
     #     print(f"arm_loc_web = {arm_loc_web}")
 
-    #尋找草的位置
+    #cam1尋找草的位置
     imgColor_g,mask_g = myColorFinder.update(frame,hsvVals_g)
     imgContour_g,contours_g = cvzone.findContours(frame, mask_g,minArea=500)
     imgStack_all = cvzone.stackImages([ imgColor_g,imgContour_g],2,0.5)
@@ -227,7 +225,7 @@ while 1:
                 temp_grass_A = mid
                 grass_flag_A = 0
             cv2.circle(frame,(int(temp_grass_A[0]),int(temp_grass_A[1])), 8, (0, 0, 255), -1)
-
+            
         else:
             temp_grass_A = None
     except:
@@ -247,7 +245,7 @@ while 1:
                 grass_flag_B = 0
             cv2.circle(frame_web,(int(temp_grass_B[0]),int(temp_grass_B[1])), 8, (0, 0, 255), -1)
         else:
-            temp_grass_B = None     
+            temp_grass_B = None
     except:
         pass
     
@@ -261,11 +259,19 @@ while 1:
             arm_loc_web = contours_r_web[0]['center']
             cv2.circle(frame_web,(int(arm_loc_web[0]),int(arm_loc_web[1])), 8, (0, 255, 255), -1)
         else:
-            arm_loc_web = None     
+            arm_loc_web = None
     except:
         pass
     
     
+    print("----------------------------------")
+    print(f"cam1 : arm_loc = {arm_loc}")
+    print(f"cam1 : grass_loc = {temp_grass_A}")
+    
+    print(f"cam2 : arm_loc = {arm_loc_web}")
+    print(f"cam2 : grass_loc = {temp_grass_B}")
+
+
     cv2.waitKey(1)
     cv2.imshow('frame', frame)
     cv2.imshow('frame_web', frame_web)
