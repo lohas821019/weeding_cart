@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jun 21 11:56:16 2022
-
 @author: Jason
 """
 import os
@@ -61,10 +60,10 @@ def arm_control1():
             a[0] = -18
             
         #控制上下
-        if a[1] > 10 :
-            a[1] = 10
-        elif a[1] <-8 :
-            a[1] = -8
+        # if a[1] > 10 :
+        #     a[1] = 10
+        # elif a[1] <-8 :
+        #     a[1] = -8
 
         #如果目標物中心點x大於手臂的中心點x，則控制手臂往左
         #如果目標物中心點x小於手臂的中心點x，則控制手臂往右
@@ -75,10 +74,10 @@ def arm_control1():
             
         #如果目標物中心點y大於手臂的中心點y，則控制手臂往上
         #如果目標物中心點y小於手臂的中心點y，則控制手臂往下
-        if mid[1] - arm_loc[1] >= 0:
-            a[1] = a[1]+0.5
-        else:
-            a[1] = a[1]-0.5
+        # if mid[1] - arm_loc[1] >= 0:
+        #     a[1] = a[1]+0.5
+        # else:
+        #     a[1] = a[1]-0.5
     except:
         pass
     
@@ -169,8 +168,8 @@ model.eval()
 first = 1
 
 #step1
-cap = cv2.VideoCapture(2,cv2.CAP_DSHOW)
-cap_web = cv2.VideoCapture(3,cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+cap_web = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
 grass_flag_A = 1
 grass_flag_B = 1
@@ -264,12 +263,12 @@ while 1:
         pass
     
     
-    print("----------------------------------")
-    print(f"cam1 : arm_loc = {arm_loc}")
-    print(f"cam1 : grass_loc = {temp_grass_A}")
+    # print("----------------------------------")
+    # print(f"cam1 : arm_loc = {arm_loc}")
+    # print(f"cam1 : grass_loc = {temp_grass_A}")
     
-    print(f"cam2 : arm_loc = {arm_loc_web}")
-    print(f"cam2 : grass_loc = {temp_grass_B}")
+    # print(f"cam2 : arm_loc = {arm_loc_web}")
+    # print(f"cam2 : grass_loc = {temp_grass_B}")
 
 
     cv2.waitKey(1)
@@ -359,4 +358,3 @@ arm_exit()
 
 time.sleep(2)
 sys.exit()
-
