@@ -314,7 +314,7 @@ while 1:
         else:
             case = 1
             
-        if n==10:
+        if n==5:
             if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
                 arm_move(a)
                 print(f'arm_move(a) = {a}')
