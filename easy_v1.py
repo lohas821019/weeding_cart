@@ -162,12 +162,15 @@ grass_flag_B = 1
 while 1:
     #cam1
     _, frame = cap.read()
+    # frame = frame[]
     results_roi = model(frame, size=640)
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
     
     #cam2
     _, frame_web = cap_web.read()
+    # frame_web = frame_web[]
+
     results_roi_web = model(frame_web, size=640)
     results_roi_web.pred
     data_web = results_roi_web.pandas().xyxy[0]
@@ -176,8 +179,8 @@ while 1:
     cv2.imshow('frame_web', frame_web)
     
     #test
-    path =r'C:\Users\Jason\Documents\GitHub\weeding_cart\resoureces\IMG_9069 22.jpg'
-    cap_web = cv2.VideoCapture(path)
+    # path =r'C:\Users\Jason\Documents\GitHub\weeding_cart\resoureces\IMG_9069 22.jpg'
+    # cap_web = cv2.VideoCapture(path)
     
 
 #%%cam1
@@ -231,7 +234,7 @@ while 1:
 #%%
 #step2
     #如果有抓到草，車子停止
-    if temp_grass_A and arm_loc:
+    if temp_grass_A: #and arm_loc:
         motor_control(s,0)
         
         #計算手臂與雜草距離
