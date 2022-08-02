@@ -162,7 +162,8 @@ grass_flag_B = 1
 while 1:
     #cam1
     _, frame = cap.read()
-    # frame = frame[]
+    # roi = frame[100:420,220:420]
+
     results_roi = model(frame, size=640)
     results_roi.pred
     data = results_roi.pandas().xyxy[0]

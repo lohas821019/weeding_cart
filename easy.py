@@ -309,7 +309,7 @@ while 1:
             data1.append(now_dist)
             print(f'data1 = {data1}')
                 
-        if now_dist >= 80:
+        if now_dist >= 50:
             case = 0
         else:
             case = 1
