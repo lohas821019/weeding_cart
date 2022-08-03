@@ -41,12 +41,6 @@ hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vm
 #     get_model_label = False
 
 
-#車子馬達初始化
-# try:
-#     s = motor_init()
-# except:
-#     s.close()
-
 #機械手臂參數設定，手臂初始位置
 global a
 # a = [0, -12, -15, -15, 0]
