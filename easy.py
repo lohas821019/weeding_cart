@@ -40,7 +40,6 @@ hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vm
 #     model = load_model()
 #     get_model_label = False
 
-
 #機械手臂參數設定，手臂初始位置
 global a
 # a = [0, -12, -15, -15, 0]
@@ -111,6 +110,7 @@ def arm_control2():
         pass
     
 def arm_control_by_red():
+    
     try:
         #控制左右
         # if a[4] > 10 :
@@ -158,7 +158,7 @@ arm_home()
 model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
 model.eval()
 
-
+#無人車初始化
 COM_PORT1 = 'COM3'
 baudRate = 9600
 ser1 = serial.Serial(COM_PORT1, baudRate, timeout=0.5)
@@ -260,15 +260,6 @@ while 1:
             arm_loc_web = None
     except:
         pass
-    
-    
-    # print("----------------------------------")
-    # print(f"cam1 : arm_loc = {arm_loc}")
-    # print(f"cam1 : grass_loc = {temp_grass_A}")
-    
-    # print(f"cam2 : arm_loc = {arm_loc_web}")
-    # print(f"cam2 : grass_loc = {temp_grass_B}")
-
 
     cv2.waitKey(1)
     cv2.imshow('frame', frame)
@@ -279,7 +270,7 @@ while 1:
 #step2
     #如果有抓到草，車子停止
     if temp_grass_A and arm_loc:
-        # motor_control(s,'0')
+        
         data_s = np.array('0').tobytes()
         ser1.write(data_s)
         
@@ -319,7 +310,6 @@ while 1:
             if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
                 arm_move(a)
                 print(f'arm_move(a) = {a}')
-                n = 0
                 first = 1
                 if case == 0:
                     arm_control1()
@@ -345,10 +335,8 @@ while 1:
             first = 1
      #如果沒抓到草，車子移動
     else:
-        # motor_control(s,'2')
         data_s = np.array('2').tobytes()
         ser1.write(data_s)
-        pass
 
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
