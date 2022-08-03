@@ -17,6 +17,10 @@ import cvzone
 from cvzone.ColorModule import ColorFinder
 from action import *
 import sys
+import serial
+import time
+import numpy as np
+
 
 #抓取紅色設定
 myColorFinder = ColorFinder()
@@ -160,10 +164,11 @@ arm_home()
 model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
 model.eval()
 
-# try:
-#     s = motor_init()
-# except:
-#     s.close()
+
+COM_PORT1 = 'COM3'
+baudRate = 9600
+ser1 = serial.Serial(COM_PORT1, baudRate, timeout=0.5)
+
 
 first = 1
 
@@ -280,7 +285,9 @@ while 1:
 #step2
     #如果有抓到草，車子停止
     if temp_grass_A and arm_loc:
-        # motor_control(s,0)
+        # motor_control(s,'0')
+        data_s = np.array('0').tobytes()
+        ser1.write(data_s)
         
         #計算手臂與雜草距離
         sx = pow(abs((arm_loc[0]-temp_grass_A[0])),2)
@@ -344,12 +351,15 @@ while 1:
             first = 1
      #如果沒抓到草，車子移動
     else:
-        # motor_control(s,1)
+        # motor_control(s,'2')
+        data_s = np.array('2').tobytes()
+        ser1.write(data_s)
         pass
 
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
         arm_home()
+        ser1.close()
         break
 
 cv2.destroyAllWindows()
