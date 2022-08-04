@@ -110,7 +110,6 @@ def arm_control2():
         pass
     
 def arm_control_by_red():
-    
     try:
         #控制左右
         # if a[4] > 10 :
@@ -149,6 +148,7 @@ def arm_control_by_red():
             a[3] = a[3]-0.5
     except:
         pass
+
 #%%
 
 #手臂初始化
@@ -163,16 +163,13 @@ COM_PORT1 = 'COM3'
 baudRate = 9600
 ser1 = serial.Serial(COM_PORT1, baudRate, timeout=0.5)
 
-
-first = 1
-
 #step1
 cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 cap_web = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
 grass_flag_A = 1
 grass_flag_B = 1
-
+first = 1
 
 while 1:
     _, frame = cap.read()
@@ -223,7 +220,6 @@ while 1:
                 temp_grass_A = mid
                 grass_flag_A = 0
             cv2.circle(frame,(int(temp_grass_A[0]),int(temp_grass_A[1])), 8, (0, 0, 255), -1)
-            
         else:
             temp_grass_A = None
     except:
@@ -270,7 +266,6 @@ while 1:
 #step2
     #如果有抓到草，車子停止
     if temp_grass_A and arm_loc:
-        
         data_s = np.array('0').tobytes()
         ser1.write(data_s)
         
@@ -290,27 +285,28 @@ while 1:
         except:
              pass
          
-        if first:
-            n = 0
-            data1 = []
+        if first and now_dist!=0:
             first = 0
-                
-        if now_dist!=0:
+            
+            n = 0
             n = n + 1
             print(f'n = {n}')
+            
+            data1 = []
             data1.append(now_dist)
             print(f'data1 = {data1}')
-                
+
         if now_dist >= 50:
             case = 0
         else:
             case = 1
             
-        if n==5:
+        if n == 5:
             if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
                 arm_move(a)
                 print(f'arm_move(a) = {a}')
                 first = 1
+                
                 if case == 0:
                     arm_control1()
                 elif case == 1:
@@ -319,24 +315,30 @@ while 1:
                     try:
                         if now_dist_web <= 20:
                             print("往下鑽")
-                            nowpos = innfos.readpos(actuID)
-                            print(f'nowpos = {nowpos}')
+                            # nowpos = innfos.readpos(actuID)
+                            # print(f'nowpos = {nowpos}')
                             # arm_move([nowpos[0], nowpos[1], -7, 0, 0])
                             time.sleep(3)
                             arm_home()
+                            
                             a = [-18,0,0,0,0]
                             mid = None
                             arm_loc = None
                             case = 0
-                            grass_flag = 1
+                            grass_flag_A = 1
+                            grass_flag_B = 1
+                            
+                            data_s = np.array('2').tobytes()
+                            ser1.write(data_s)
                     except:
                         pass
-        elif n>10:
+        elif n > 5:
             first = 1
      #如果沒抓到草，車子移動
     else:
         data_s = np.array('2').tobytes()
         ser1.write(data_s)
+
 
     k = cv2.waitKey(1) & 0xFF
     if k == 27:
