@@ -351,25 +351,28 @@ class Cam():
                     if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
                         self.first = 1
                         
-                        if case == 0:
-                            self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
-                            self.arm.move(self.arm.a)
-                            
-                        elif case == 1:
-                            self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
-                            self.arm.move(self.arm.a)
-                            
-                        if self.now_dist_web <= 30:
-                            self.arm.home()
-                            self.arm.a = [-18,0,0,0,0]
-                            self.mid = None
-                            self.arm_loc = None
-                            self.now_dist_web = 1000
-                            case = 0
-                            self.grass_flag_A = 1
-                            self.grass_flag_B = 1
-                            
-                            self.car.backward()
+                        try:
+                            if case == 0:
+                                self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
+                                self.arm.move(self.arm.a)
+                                
+                            elif case == 1:
+                                self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
+                                self.arm.move(self.arm.a)
+                                
+                            if self.now_dist_web <= 40:
+                                self.arm.home()
+                                self.arm.a = [-18,0,0,0,0]
+                                self.mid = None
+                                self.arm_loc = None
+                                self.now_dist_web = 1000
+                                case = 0
+                                self.grass_flag_A = 1
+                                self.grass_flag_B = 1
+                                
+                                self.car.backward()
+                        except:
+                            pass
 
                 elif n > 5:
                     self.first = 1
