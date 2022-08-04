@@ -16,6 +16,7 @@ import innfos
 import cv2
 import cvzone
 from cvzone.ColorModule import ColorFinder
+import torch
 
 #%% CAR
 class Car():
@@ -106,7 +107,7 @@ class Arm():
         time.sleep(1)
         innfos.trapposmode(self.actuID) #梯形模式
         self.a = [-18,0,0,0,0]
-        innfos.setpos(self.actuID, [0,0,0,0,0])
+        innfos.setpos(self.actuID,self.a)
         time.sleep(1)
         print("手臂初始化完成")
         Arm.Arm_flag = True
@@ -120,7 +121,7 @@ class Arm():
         innfos.setpos(self.actuID, [0,0,0,0,0])
         time.sleep(2)
         print("手臂回家")
-    
+        
     def move(self,pos):
         innfos.setpos(self.actuID, pos)
         time.sleep(2)
@@ -150,9 +151,11 @@ class Arm():
             self.a[0] = -18
             
         if temp_grass_A[0] - arm_loc[0] <= 0:
-            self.a[0] = self.a[0]+0.5
+            self.a[0] = self.a[0]+1
         else:
-            self.a[0] = self.a[0]-0.5
+            self.a[0] = self.a[0]-1
+        
+        print(self.a)
 
     def arm_control_by_red(self,temp_grass_B,arm_loc_web):
     
@@ -167,14 +170,15 @@ class Arm():
                 self.a[3] = -10
     
             if temp_grass_B[0] - arm_loc_web[0] <= 0:
-                self.a[0] = self.a[0]+0.5
+                self.a[0] = self.a[0]+1
             else:
-                self.a[0] = self.a[0]-0.5
+                self.a[0] = self.a[0]-1
     
             if temp_grass_B[1] - arm_loc_web[1] >= 0:
-                self.a[3] = self.a[3]+0.5
+                self.a[3] = self.a[3]+1
             else:
-                self.a[3] = self.a[3]-0.5
+                self.a[3] = self.a[3]-1
+            print(self.a)
 
 #%% YOLO
 class Yolov5_Model():
@@ -186,8 +190,8 @@ class Yolov5_Model():
         if Yolov5_Model.model_flag:
             return
         # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
-        # self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
-        self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
+        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
+        # self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
 
         self.model.eval()
         Yolov5_Model.model_flag = True
@@ -316,21 +320,25 @@ class Cam():
                 self.sy = pow(abs((self.arm_loc[1]-self.temp_grass_A[1])),2)
                 self.now_dist = int(abs((self.sx-self.sy))**0.5)
                 print(f'now_dist = {self.now_dist}')
-
-                if self.temp_grass_B and self.arm_loc_web:
-                 #計算手臂與雜草距離
-                 self.sx = pow(abs((self.arm_loc_web[0]-self.temp_grass_B[0])),2)
-                 self.sy = pow(abs((self.arm_loc_web[1]-self.temp_grass_B[1])),2)
-                 self.now_dist_web = int(abs((self.sx-self.sy))**0.5)
-                 print(f'now_dist_web = {self.now_dist_web}')
-
-                if self.first and self.now_dist!=0:
+                
+                try:
+                    if self.temp_grass_B and self.arm_loc_web:
+                     #計算手臂與雜草距離
+                     self.sx = pow(abs((self.arm_loc_web[0]-self.temp_grass_B[0])),2)
+                     self.sy = pow(abs((self.arm_loc_web[1]-self.temp_grass_B[1])),2)
+                     self.now_dist_web = int(abs((self.sx-self.sy))**0.5)
+                     print(f'now_dist_web = {self.now_dist_web}')
+                except:
+                    pass
+                
+                if self.first:
                     self.first = 0
                     n = 0
+                    data1 = []
+
+                if self.now_dist!=0:
                     n = n + 1
                     print(f'n = {n}')
-                    
-                    data1 = []
                     data1.append(self.now_dist)
                     print(f'data1 = {data1}')
         
@@ -340,31 +348,29 @@ class Cam():
                     case = 1
                     
                 if n == 5:
-                    if self.data1[n-1]-self.data1[n-2]<=3 and self.data1[n-2]-self.data1[n-3]<=3 and self.data1[n-3]-self.data1[n-4]<=5:
+                    if data1[n-1]-data1[n-2]<=3 and data1[n-2]-data1[n-3]<=3 and data1[n-3]-data1[n-4]<=5:
                         self.first = 1
                         
                         if case == 0:
-                            self.arm.control1(self.temp_grass_A,self.arm_loc)
+                            self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
                             self.arm.move(self.arm.a)
                             
                         elif case == 1:
                             self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
                             self.arm.move(self.arm.a)
-                            try:
-                                if self.now_dist_web <= 20:
+                            
+                        if self.now_dist_web <= 30:
+                            self.arm.home()
+                            self.arm.a = [-18,0,0,0,0]
+                            self.mid = None
+                            self.arm_loc = None
+                            self.now_dist_web = 1000
+                            case = 0
+                            self.grass_flag_A = 1
+                            self.grass_flag_B = 1
+                            
+                            self.car.backward()
 
-                                    self.arm.home()
-                                    
-                                    self.arm.a = [-18,0,0,0,0]
-                                    self.mid = None
-                                    self.arm_loc = None
-                                    case = 0
-                                    self.grass_flag_A = 1
-                                    self.grass_flag_B = 1
-                                    
-                                    self.car.backward()
-                            except:
-                                pass
                 elif n > 5:
                     self.first = 1
                     
