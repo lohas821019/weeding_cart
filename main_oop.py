@@ -27,7 +27,7 @@ class Car():
         if Car.Car_flag:
             return
         # threading.Thread.__init__(self)
-        self.COM_PORT = 'COM3'
+        self.COM_PORT = 'COM4'
         self.baudRate = 9600
         self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
         print('車輛初始化成功')
@@ -56,38 +56,6 @@ class Car():
     def close(self):
         self.ser1.close()
         print('車輛關閉')
-        
-    # def run(self):
-    #     while 1 :
-    #         job = self.car_signal.get()
-    #         # print(f'Working on {job}')
-
-    #         if job == 'stop':
-    #             # print('car stop')
-    #             self.stop()
-                
-    #         elif job == 'move':
-    #             # print('car move')
-    #             self.forward()
-                
-    #         elif job == 'q':
-    #             self.close()
-    #             # print('Ending the car')
-    #             break
-    #         # print(f'Finished {job}')
-    #         self.car_signal.task_done()
-            
-#測試用
-# car_signal = queue.Queue()
-# car_signal.empty()
-# c =Car(car_signal)
-# c.start()
-# c.isAlive()
-# c.close()
-
-# car_signal.put('move')
-# car_signal.put('stop')
-# car_signal.put('q')
 
 
 #%% ARM
