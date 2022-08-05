@@ -27,7 +27,7 @@ class Car():
         if Car.Car_flag:
             return
         # threading.Thread.__init__(self)
-        self.COM_PORT = 'COM4'
+        self.COM_PORT = 'COM3'
         self.baudRate = 9600
         self.ser1 = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
         print('車輛初始化成功')
@@ -203,7 +203,6 @@ class Cam():
         self.grass_flag_B = 1
         self.first = 1
 
-
     def run(self):
         while self.cap.isOpened:
             
@@ -336,9 +335,10 @@ class Cam():
                                 self.now_dist_web = 1000
                                 case = 0
                                 self.grass_flag_A = 1
-                                self.grass_flag_B = 1
-                                
+                                self.grass_flag_B = 1                       
                                 self.car.backward()
+                                self.balck_time = 0
+
                         except:
                             pass
 
