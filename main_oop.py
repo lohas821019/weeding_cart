@@ -57,7 +57,6 @@ class Car():
         self.ser1.close()
         print('車輛關閉')
 
-
 #%% ARM
 class Arm():
     instance = None
