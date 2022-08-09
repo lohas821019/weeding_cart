@@ -64,6 +64,15 @@ class Car():
         mcu_feedback = mcu_feedback.strip()
         # time.sleep(0.1)
         return mcu_feedback
+    
+    def response1(self):
+        tdata = self.ser.read()           # Wait forever for anything
+        time.sleep(1)              # Sleep (or inWaiting() doesn't give the correct value)
+        data_left = self.ser.inWaiting()  # Get the number of characters ready to be read
+        tdata += self.ser.read(data_left)
+        tdata = tdata.decode('utf-8').strip()
+        return tdata
+
 
 #%% ARM
 class Arm():
@@ -211,7 +220,7 @@ class Cam():
         self.first = 1
         self.limit_times = 0
         self.frame_black_count = 0
-        self.n =0
+        self.n = 0
 
     def run(self):
         while self.cap.isOpened:
@@ -221,9 +230,9 @@ class Cam():
             
             self.roi = self.frame[100:420,220:420]
             
-            # if self.frame_black_count == 5:
-            #     self.roi = self.frame[100:420,220:420] #變成全黑
-            #     self.frame_black_count = 0
+            if self.frame_black_count == 5:
+                self.roi = np.zeros((320,200,3), np.uint8)
+                self.frame_black_count = 0
             
             self.results_roi= self.model.predict(self.frame)
             self.results_roi_web= self.model.predict(self.frame_web)
@@ -248,7 +257,6 @@ class Cam():
             try:
                 if self.contours_g:
                     self.mid = self.contours_g[0]['center']
-                    # cv2.circle(frame,(int(mid[0]),int(mid[1])), 8, (0, 0, 255), -1)
                     if self.grass_flag_A:
                         self.temp_grass_A = self.mid
                         self.grass_flag_A = 0
@@ -261,12 +269,10 @@ class Cam():
             #cam2找草的位置
             self.imgColor_g_web,self.mask_g_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_g_web)
             self.imgContour_g_web,self.contours_g_web = cvzone.findContours(self.frame_web, self.mask_g_web,minArea=500)
-            # imgStack_all_web = cvzone.stackImages([ imgColor_g_web,imgColor_g_web],2,0.5)
         
             try:
                 if self.contours_g_web:
                     self.mid_web = self.contours_g_web[0]['center']
-                    # cv2.circle(frame_web,(int(mid_web[0]),int(mid_web[1])), 8, (0, 0, 255), -1)
                     if self.grass_flag_B:
                         self.temp_grass_B = self.mid_web
                         self.grass_flag_B = 0
@@ -279,7 +285,6 @@ class Cam():
             #cam2找手臂的位置
             self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
             self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
-            # imgStack_allr_web = cvzone.stackImages([imgColor_r_web,imgColor_r_web],2,0.5)
             
             try:
                 if self.contours_r_web:
@@ -290,14 +295,12 @@ class Cam():
             except:
                 pass
             
-            
             if self.temp_grass_A and self.arm_loc:
                 self.car.stop()
-                # time.sleep(1)
-                # if self.car.response() == 0: #收到指令後才做動作
+                if self.car.response1() == '0': #收到指令後才做動作
                     #進行標點
-                cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
-                cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
 
                 #計算手臂與雜草距離
                 self.sx = pow(abs((self.arm_loc[0]-self.temp_grass_A[0])),2)
@@ -319,12 +322,10 @@ class Cam():
                 except:
                     pass
                 
-                
                 cv2.waitKey(1)
                 cv2.imshow("frame", self.frame)
                 cv2.imshow("frame_web", self.frame_web)
                 cv2.imshow("roi", self.roi)
-                
                 
                 if self.first:
                     self.first = 0
