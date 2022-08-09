@@ -236,7 +236,7 @@ class Cam():
                     self.data = self.results_roi.pandas().xyxy[0]
                     self.arm_loc = ((self.data.xmin + self.data.xmax)/2,(self.data.ymin + self.data.ymax)/2)
                     self.arm_loc = [int(self.arm_loc[0][0]),int(self.arm_loc[1][0])]
-                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                    # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc = None
                     
@@ -252,7 +252,7 @@ class Cam():
                     if self.grass_flag_A:
                         self.temp_grass_A = self.mid
                         self.grass_flag_A = 0
-                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                    # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_A = None
             except:
@@ -270,7 +270,7 @@ class Cam():
                     if self.grass_flag_B:
                         self.temp_grass_B = self.mid_web
                         self.grass_flag_B = 0
-                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                    # cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_B = None
             except:
@@ -284,24 +284,20 @@ class Cam():
             try:
                 if self.contours_r_web:
                     self.arm_loc_web = self.contours_r_web[0]['center']
-                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                    # cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc_web = None
             except:
                 pass
             
-            cv2.waitKey(1)
-            cv2.imshow("frame", self.frame)
-            cv2.imshow("frame_web", self.frame_web)
-            cv2.imshow("roi", self.roi)
             
             if self.temp_grass_A and self.arm_loc:
                 self.car.stop()
                 # time.sleep(1)
                 # if self.car.response() == 0: #收到指令後才做動作
                     #進行標點
-                # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
-                # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
 
                 #計算手臂與雜草距離
                 self.sx = pow(abs((self.arm_loc[0]-self.temp_grass_A[0])),2)
@@ -318,10 +314,17 @@ class Cam():
                          self.now_dist_web = int(abs((self.sx-self.sy))**0.5)
                          print(f'now_dist_web = {self.now_dist_web}')
                          
-                         # cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
-                         # cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                         cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                         cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 except:
                     pass
+                
+                
+                cv2.waitKey(1)
+                cv2.imshow("frame", self.frame)
+                cv2.imshow("frame_web", self.frame_web)
+                cv2.imshow("roi", self.roi)
+                
                 
                 if self.first:
                     self.first = 0
