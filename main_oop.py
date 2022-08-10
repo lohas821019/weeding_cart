@@ -166,21 +166,21 @@ class Arm():
                 self.a[3] = self.a[3]-1
             print(self.a)
 
-#%% YOLO
-class Yolov5_Model():
+#%% Yolov5_Model_Arm
+class Yolov5_Model_Arm():
     instance = None
     model_flag = False
     
     def __init__(self):
         
-        if Yolov5_Model.model_flag:
+        if Yolov5_Model_Arm.model_flag:
             return
         # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
-        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/arm_best.pt', source='local')
+        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/weights/arm.pt', source='local')
         # self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
 
         self.model.eval()
-        Yolov5_Model.model_flag = True
+        Yolov5_Model_Arm.model_flag = True
             
     def predict(self,frame):
         self.results_roi = self.model(frame, size=640)
@@ -191,12 +191,40 @@ class Yolov5_Model():
         if cls.instance is None:
             cls.instance = super().__new__(cls)
         return cls.instance
+#%% Yolov5_Model_Grass
+class Yolov5_Model_Grass():
+    instance = None
+    model_flag = False
+    
+    def __init__(self):
+        
+        if Yolov5_Model_Grass.model_flag:
+            return
+        # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
+        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/weights/grass.pt', source='local')
+        # self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
+
+        self.model.eval()
+        Yolov5_Model_Grass.model_flag = True
+            
+    def predict(self,frame):
+        self.results_roi = self.model(frame, size=640)
+        self.results_roi.pred
+        return self.results_roi
+    
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+    
 #%% CAM
 class Cam():
-    def __init__(self,car,arm):
+    def __init__(self,car,arm,model_arm,model_grass):
         self.car = car
         self.arm = arm
-        
+        self.model_arm = model_arm
+        self.model_grass = model_grass
+
         self.hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
         self.hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
         
@@ -206,8 +234,6 @@ class Cam():
         self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
         self.cap_web = cv2.VideoCapture(2,cv2.CAP_DSHOW)
 
-        self.model = Yolov5_Model()
-        
         self.myColorFinder = ColorFinder()
         self.myColorFinder1 = ColorFinder()
 
@@ -231,6 +257,11 @@ class Cam():
         now_dist = int(abs((sx-sy))**0.5)
         return now_dist
         
+    def mid_point(self,data):
+        arm_loc = ((self.data.xmin + self.data.xmax)/2,(self.data.ymin + self.data.ymax)/2)
+        arm_loc = [int(arm_loc[0][0]),int(arm_loc[1][0])]
+        return arm_loc
+        
     def run(self):
         while self.cap.isOpened:
             
@@ -239,72 +270,61 @@ class Cam():
             
             self.roi = self.frame[100:420,220:420]
             
-            if self.frame_black_count == 5:
-                self.roi = np.zeros((320,200,3), np.uint8)
-                self.frame_black_count = 0
+            # if self.frame_black_count == 5:
+            #     self.roi = np.zeros((320,200,3), np.uint8)
+            #     self.frame_black_count = 0
             
-            self.results_roi= self.model.predict(self.frame)
-            self.results_roi_web= self.model.predict(self.frame_web)
+            self.results_roi= self.model_arm.predict(self.frame)
+            self.results_roi_g= self.model_grass.predict(self.frame)
             
-            self.data = self.results_roi.pandas().xyxy[0]
+            self.results_roi_web= self.model_arm.predict(self.frame_web)
+            self.results_roi_web_g= self.model_grass.predict(self.frame_web)
+            
+            self.data0_a = self.results_roi.pandas().xyxy[0]
+            self.data0_g = self.results_roi_g.pandas().xyxy[0]
+            
+            self.data1_a = self.results_roi_web.pandas().xyxy[0]
+            self.data1_g = self.results_roi_web_g.pandas().xyxy[0]
+
 
             #cam1尋找手臂的位置
-            if self.data.name.any():
+            if self.data0_a.name.any():
                 if self.results_roi.pandas().xyxy[0].name[0] == 'arm':
-                    self.data = self.results_roi.pandas().xyxy[0]
-                    self.arm_loc = ((self.data.xmin + self.data.xmax)/2,(self.data.ymin + self.data.ymax)/2)
-                    self.arm_loc = [int(self.arm_loc[0][0]),int(self.arm_loc[1][0])]
+                    self.arm_loc = self.mid_point(self.data0_a)
                     cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc = None
                     
             #cam1尋找草的位置
-            self.imgColor_g,self.mask_g = self.myColorFinder.update(self.frame,self.hsvVals_g)
-            self.imgContour_g,self.contours_g = cvzone.findContours(self.frame, self.mask_g,minArea=500)
-            self.imgStack_all = cvzone.stackImages([self.imgColor_g,self.imgContour_g],2,0.5)
-            
-            try:
-                if self.contours_g:
-                    self.mid = self.contours_g[0]['center']
+            if self.data0_g.name.any():
+                if self.results_roi_g.pandas().xyxy[0].name[0] == 'grass':
+                    self.mid = self.mid_point(self.data0_g)
                     if self.grass_flag_A:
                         self.temp_grass_A = self.mid
                         self.grass_flag_A = 0
-                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 255, 255), -1)
                 else:
                     self.temp_grass_A = None
-            except:
-                pass
-            
-            #cam2找草的位置
-            self.imgColor_g_web,self.mask_g_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_g_web)
-            self.imgContour_g_web,self.contours_g_web = cvzone.findContours(self.frame_web, self.mask_g_web,minArea=500)
-        
-            try:
-                if self.contours_g_web:
-                    self.mid_web = self.contours_g_web[0]['center']
+                    
+            #cam1尋找手臂的位置
+            if self.data1_a.name.any():
+                if self.results_roi_web.pandas().xyxy[0].name[0] == 'arm':
+                    self.arm_loc_web = self.mid_point(self.data1_a)
+                    cv2.circle(self.frame,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                else:
+                    self.arm_loc_web = None
+                    
+            #cam1尋找草的位置
+            if self.data1_g.name.any():
+                if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
+                    self.mid_web = self.mid_point(self.data1_g)
                     if self.grass_flag_B:
                         self.temp_grass_B = self.mid_web
                         self.grass_flag_B = 0
-                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                    cv2.circle(self.frame,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 255, 255), -1)
                 else:
                     self.temp_grass_B = None
-            except:
-                pass
-            
-            #cam2找手臂的位置
-            self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
-            self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
-            
-            try:
-                if self.contours_r_web:
-                    self.arm_loc_web = self.contours_r_web[0]['center']
-                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
-                else:
-                    self.arm_loc_web = None
-            except:
-                pass
-            
-            
+                    
             cv2.waitKey(1)
             cv2.imshow("frame", self.frame)
             cv2.imshow("frame_web", self.frame_web)
@@ -319,7 +339,7 @@ class Cam():
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
-                
+
                 try:
                     if self.temp_grass_B and self.arm_loc_web:
                         #計算手臂與雜草距離
@@ -363,7 +383,7 @@ class Cam():
                                 self.grass_flag_B = 1
                         except:
                             pass
-                                
+                        
                 elif len(self.data1) > 5:
                     self.data1 = []
                     
@@ -390,7 +410,10 @@ def main():
 
     car = Car()
     arm = Arm()
-    cam = Cam(car,arm)
+    model_arm = Yolov5_Model_Arm()
+    model_grass = Yolov5_Model_Grass()
+
+    cam = Cam(car,arm,model_arm,model_grass)
     time.sleep(5)
     cam.run()
 
