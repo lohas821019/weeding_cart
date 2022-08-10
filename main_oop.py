@@ -69,7 +69,7 @@ class Car():
     
     def response1(self):
         tdata = self.ser.read()           # Wait forever for anything
-        time.sleep(1)              # Sleep (or inWaiting() doesn't give the correct value)
+        # time.sleep(0.3)              # Sleep (or inWaiting() doesn't give the correct value)
         data_left = self.ser.inWaiting()  # Get the number of characters ready to be read
         tdata += self.ser.read(data_left)
         tdata = tdata.decode('utf-8').strip()
@@ -224,8 +224,8 @@ class Cam():
         self.car.state = 0
 
     def distance(self,x,y):
-        sx = pow(abs((self.x[0]-self.y[0])),2)
-        sy = pow(abs((self.x[1]-self.y[1])),2)
+        sx = pow(abs((x[0]-y[0])),2)
+        sy = pow(abs((x[1]-y[1])),2)
         now_dist = int(abs((sx-sy))**0.5)
         return now_dist
         
@@ -252,7 +252,7 @@ class Cam():
                     self.data = self.results_roi.pandas().xyxy[0]
                     self.arm_loc = ((self.data.xmin + self.data.xmax)/2,(self.data.ymin + self.data.ymax)/2)
                     self.arm_loc = [int(self.arm_loc[0][0]),int(self.arm_loc[1][0])]
-                    # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc = None
                     
@@ -267,7 +267,7 @@ class Cam():
                     if self.grass_flag_A:
                         self.temp_grass_A = self.mid
                         self.grass_flag_A = 0
-                    # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_A = None
             except:
@@ -283,7 +283,7 @@ class Cam():
                     if self.grass_flag_B:
                         self.temp_grass_B = self.mid_web
                         self.grass_flag_B = 0
-                    # cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_B = None
             except:
@@ -296,81 +296,82 @@ class Cam():
             try:
                 if self.contours_r_web:
                     self.arm_loc_web = self.contours_r_web[0]['center']
-                    # cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc_web = None
             except:
                 pass
             
+            
+            cv2.waitKey(1)
+            cv2.imshow("frame", self.frame)
+            cv2.imshow("frame_web", self.frame_web)
+            cv2.imshow("roi", self.roi)
+            
             if self.temp_grass_A and self.arm_loc:
                 if self.car.state != 0:
                     self.car.stop()
                     self.car.state = 0
-                    
-                if self.car.state == 0 and self.car.response1() == '0': #收到指令後才做動作
-                    #進行標點
-                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
-                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
-
-                #計算手臂與雜草距離
-                self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
-                print(f'now_dist = {self.now_dist}')
+                    print(self.car.state)
                 
-                try:
-                    if self.temp_grass_B and self.arm_loc_web:
-                        #計算手臂與雜草距離
-                         self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
-                         print(f'now_dist_web = {self.now_dist_web}')
-                         
-                         cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
-                         cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
-                except:
-                    pass
-                
-                if self.first:
-                    self.first = 0
-                    self.n = 0
-                    data1 = []
 
-                if self.now_dist!=0:
-                    self.n = self.n + 1
-                    print(f'n = {self.n}')
-                    data1.append(self.now_dist)
-                    print(f'data1 = {data1}')
-                    self.limit_times += 1
-
-                if self.now_dist >= 50:
-                    case = 0
-                else:
-                    case = 1
+                    #計算手臂與雜草距離
+                    self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
+                    print(f'now_dist = {self.now_dist}')
                     
-                if self.n == 5:
-                    if data1[self.n-1]-data1[self.n-2]<=3 and data1[self.n-2]-data1[self.n-3]<=3 and data1[self.n-3]-data1[self.n-4]<=5:
-                        self.first = 1
+                    try:
+                        if self.temp_grass_B and self.arm_loc_web:
+                            #計算手臂與雜草距離
+                             self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
+                             print(f'now_dist_web = {self.now_dist_web}')                           
+                    except:
+                        pass
+                    
+                    if self.first:
+                        self.first = 0
+                        self.n = 0
+                        data1 = []
+    
+                    if self.now_dist!=0:
+                        self.n = self.n + 1
+                        print(f'n = {self.n}')
+                        data1.append(self.now_dist)
+                        print(f'data1 = {data1}')
+                        self.limit_times += 1
+                        print(self.limit_times)
+    
+                    if self.now_dist >= 50:
+                        case = 0
+                    else:
+                        case = 1
                         
-                        try:
-                            if case == 0:
-                                self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
-                                self.arm.move(self.arm.a)
-                                
-                            elif case == 1:
-                                self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
-                                self.arm.move(self.arm.a)
-                                
-                            if self.now_dist_web <= 40 or self.limit_times >=40:
-                                self.arm.home()
-                                self.arm.a = [-18,0,0,0,0]
-                                self.mid = None
-                                self.arm_loc = None
-                                self.now_dist_web = 1000
-                                case = 0
-                                self.grass_flag_A = 1
-                                self.grass_flag_B = 1
-                        except:
-                            pass
+                    if self.n == 5:
+                        if data1[self.n-1]-data1[self.n-2]<=3 and data1[self.n-2]-data1[self.n-3]<=3 and data1[self.n-3]-data1[self.n-4]<=5:
+                            self.first = 1
                             
-                elif self.n > 5:
-                    self.first = 1
+                            try:
+                                if case == 0:
+                                    self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
+                                    self.arm.move(self.arm.a)
+                                    
+                                elif case == 1:
+                                    self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
+                                    self.arm.move(self.arm.a)
+                                    
+                                if self.now_dist_web <= 40 or self.limit_times >=100:
+                                    self.arm.home()
+                                    self.arm.a = [-18,0,0,0,0]
+                                    self.mid = None
+                                    self.arm_loc = None
+                                    self.now_dist_web = 1000
+                                    case = 0
+                                    self.grass_flag_A = 1
+                                    self.grass_flag_B = 1
+                            except:
+                                pass
+                                
+                    elif self.n > 5:
+                        self.first = 1
                     
              #如果沒抓到草，車子移動
             else:
@@ -378,10 +379,6 @@ class Cam():
                     self.car.backward()
                     self.car.state = 2
             
-            cv2.waitKey(1)
-            cv2.imshow("frame", self.frame)
-            cv2.imshow("frame_web", self.frame_web)
-            cv2.imshow("roi", self.roi)
 
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
@@ -400,6 +397,7 @@ def main():
     car = Car()
     arm = Arm()
     cam = Cam(car,arm)
+    time.sleep(5)
     cam.run()
 
 
