@@ -216,11 +216,13 @@ class Cam():
         
         self.grass_flag_A = 1
         self.grass_flag_B = 1
-        self.first = 1
+        
         self.limit_times = 0
         self.frame_black_count = 0
-        self.n = 0
         
+        self.n = 0
+        self.data1 = []
+
         self.car.state = 0
 
     def distance(self,x,y):
@@ -312,8 +314,7 @@ class Cam():
                 if self.car.state != 0:
                     self.car.stop()
                     self.car.state = 0
-                    print(self.car.state)
-                
+                    print(f'car.state = {self.car.state}')
 
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
@@ -323,20 +324,15 @@ class Cam():
                     if self.temp_grass_B and self.arm_loc_web:
                         #計算手臂與雜草距離
                          self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
-                         print(f'now_dist_web = {self.now_dist_web}')                           
+                         print(f'now_dist_web = {self.now_dist_web}')
                 except:
                     pass
-                
-                if self.first:
-                    self.first = 0
-                    self.n = 0
-                    data1 = []
 
                 if self.now_dist!=0:
                     self.n = self.n + 1
                     print(f'n = {self.n}')
-                    data1.append(self.now_dist)
-                    print(f'data1 = {data1}')
+                    self.data1.append(self.now_dist)
+                    print(f'data1 = {self.data1}')
                     self.limit_times += 1
                     print(f'limit_times = {self.limit_times}')
 
@@ -346,8 +342,7 @@ class Cam():
                     case = 1
                     
                 if self.n == 5:
-                    if data1[self.n-1]-data1[self.n-2]<=3 and data1[self.n-2]-data1[self.n-3]<=3 and data1[self.n-3]-data1[self.n-4]<=5:
-                        self.first = 1
+                    if self.data1[self.n-1]-self.data1[self.n-2]<=3 and self.data1[self.n-2]-self.data1[self.n-3]<=3 and self.data1[self.n-3]-self.data1[self.n-4]<=5:
                         try:
                             if case == 0:
                                 self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
@@ -366,12 +361,11 @@ class Cam():
                                 case = 0
                                 self.grass_flag_A = 1
                                 self.grass_flag_B = 1
-                                self.first = 1
                         except:
                             pass
                                 
-                    elif len(data1) > 5:
-                        self.first = 1
+                elif len(self.data1) > 5:
+                    self.data1 = []
                     
              #如果沒抓到草，車子移動
             else:
