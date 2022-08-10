@@ -30,8 +30,10 @@ class Car():
         self.COM_PORT = 'COM3'
         self.baudRate = 9600
         self.ser = serial.Serial(self.COM_PORT, self.baudRate, timeout=0.5)
+        self.state = 0
         print('車輛初始化成功')
         Car.Car_flag = True
+        
             
     def __new__(cls, *args, **kwargs):
         if cls.instance is None:
@@ -195,9 +197,6 @@ class Cam():
         self.car = car
         self.arm = arm
         
-        self.car_falg = 1
-        self.arm_falg = 1
-        
         self.hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
         self.hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
         
@@ -221,7 +220,15 @@ class Cam():
         self.limit_times = 0
         self.frame_black_count = 0
         self.n = 0
+        
+        self.car.state = 0
 
+    def distance(self,x,y):
+        sx = pow(abs((self.x[0]-self.y[0])),2)
+        sy = pow(abs((self.x[1]-self.y[1])),2)
+        now_dist = int(abs((sx-sy))**0.5)
+        return now_dist
+        
     def run(self):
         while self.cap.isOpened:
             
@@ -296,36 +303,29 @@ class Cam():
                 pass
             
             if self.temp_grass_A and self.arm_loc:
-                self.car.stop()
-                if self.car.response1() == '0': #收到指令後才做動作
+                if self.car.state != 0:
+                    self.car.stop()
+                    self.car.state = 0
+                    
+                if self.car.state == 0 and self.car.response1() == '0': #收到指令後才做動作
                     #進行標點
                     cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
                     cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
 
                 #計算手臂與雜草距離
-                self.sx = pow(abs((self.arm_loc[0]-self.temp_grass_A[0])),2)
-                self.sy = pow(abs((self.arm_loc[1]-self.temp_grass_A[1])),2)
-                self.now_dist = int(abs((self.sx-self.sy))**0.5)
+                self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
                 
                 try:
                     if self.temp_grass_B and self.arm_loc_web:
-
                         #計算手臂與雜草距離
-                         self.sx = pow(abs((self.arm_loc_web[0]-self.temp_grass_B[0])),2)
-                         self.sy = pow(abs((self.arm_loc_web[1]-self.temp_grass_B[1])),2)
-                         self.now_dist_web = int(abs((self.sx-self.sy))**0.5)
+                         self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
                          print(f'now_dist_web = {self.now_dist_web}')
                          
                          cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
                          cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 except:
                     pass
-                
-                cv2.waitKey(1)
-                cv2.imshow("frame", self.frame)
-                cv2.imshow("frame_web", self.frame_web)
-                cv2.imshow("roi", self.roi)
                 
                 if self.first:
                     self.first = 0
@@ -337,7 +337,6 @@ class Cam():
                     print(f'n = {self.n}')
                     data1.append(self.now_dist)
                     print(f'data1 = {data1}')
-                    
                     self.limit_times += 1
 
                 if self.now_dist >= 50:
@@ -367,7 +366,6 @@ class Cam():
                                 case = 0
                                 self.grass_flag_A = 1
                                 self.grass_flag_B = 1
-                                self.car.backward()
                         except:
                             pass
                             
@@ -376,7 +374,14 @@ class Cam():
                     
              #如果沒抓到草，車子移動
             else:
-                self.car.backward()
+                if self.car.state == 0:
+                    self.car.backward()
+                    self.car.state = 2
+            
+            cv2.waitKey(1)
+            cv2.imshow("frame", self.frame)
+            cv2.imshow("frame_web", self.frame_web)
+            cv2.imshow("roi", self.roi)
 
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
