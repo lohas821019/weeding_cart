@@ -176,7 +176,7 @@ class Yolov5_Model_Arm():
         if Yolov5_Model_Arm.model_flag:
             return
         # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
-        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/weights/arm.pt', source='local')
+        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\weeding_cart/weights/arm.pt', source='local')
         # self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
 
         self.model.eval()
@@ -201,7 +201,7 @@ class Yolov5_Model_Grass():
         if Yolov5_Model_Grass.model_flag:
             return
         # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='./arm_best.pt', force_reload=True) 
-        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\yolov5/weights/fake_grass.pt', source='local')
+        self.model = torch.hub.load(r'C:\Users\zanrobot\Documents\Github\yolov5', 'custom', path=r'C:\Users\zanrobot\Documents\Github\weeding_cart/weights/fake_grass.pt', source='local')
         # self.model = torch.hub.load(r'C:\Users\Jason\Documents\GitHub\yolov5', 'custom', path=r'C:\Users\Jason\Documents\GitHub\weeding_cart/arm_best.pt', source='local')
 
         self.model.eval()
@@ -259,7 +259,7 @@ class Cam():
         return now_dist
         
     def mid_point(self,data):
-        arm_loc = ((self.data.xmin + self.data.xmax)/2,(self.data.ymin + self.data.ymax)/2)
+        arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
         arm_loc = [int(arm_loc[0][0]),int(arm_loc[1][0])]
         return arm_loc
         
@@ -272,10 +272,10 @@ class Cam():
             self.roi = self.frame[100:420,220:420]
             
             if self.finished_flag:
-                self.frame = np.zeros((320,200,3), np.uint8) #要修正一下這個數值
+                self.frame = np.zeros((480,640,3), np.uint8) #要修正一下這個數值
                 self.frame_web = np.zeros((480,640,3), np.uint8)
                 self.frame_black_count += 1
-                if self.frame_black_count == 1:
+                if self.frame_black_count == 5:
                     self.finished_flag = 0
 
             self.results_roi= self.model_arm.predict(self.frame)
@@ -306,26 +306,26 @@ class Cam():
                     if self.grass_flag_A:
                         self.temp_grass_A = self.mid
                         self.grass_flag_A = 0
-                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_A = None
                     
-            #cam1尋找手臂的位置
+            #cam2尋找手臂的位置
             if self.data1_a.name.any():
                 if self.results_roi_web.pandas().xyxy[0].name[0] == 'arm':
                     self.arm_loc_web = self.mid_point(self.data1_a)
-                    cv2.circle(self.frame,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc_web = None
                     
-            #cam1尋找草的位置
+            #cam2尋找草的位置
             if self.data1_g.name.any():
                 if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
                     self.mid_web = self.mid_point(self.data1_g)
                     if self.grass_flag_B:
                         self.temp_grass_B = self.mid_web
                         self.grass_flag_B = 0
-                    cv2.circle(self.frame,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
                 else:
                     self.temp_grass_B = None
                     
@@ -367,30 +367,34 @@ class Cam():
                     
                 if self.n == 5:
                     if self.data1[self.n-1]-self.data1[self.n-2]<=3 and self.data1[self.n-2]-self.data1[self.n-3]<=3 and self.data1[self.n-3]-self.data1[self.n-4]<=5:
-                        try:
+                        # try:
                             if case == 0:
                                 self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
-                                self.arm.move(self.arm.a)
+                                # self.arm.move(self.arm.a)
                                 
                             elif case == 1:
                                 self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
-                                self.arm.move(self.arm.a)
-                                
-                            if self.now_dist_web <= 40 or self.limit_times >=100:
-                                self.arm.home()
-                                self.arm.a = [-18,0,0,0,0]
-                                self.mid = None
-                                self.arm_loc = None
-                                self.now_dist_web = 1000
-                                case = 0
-                                self.grass_flag_A = 1
-                                self.grass_flag_B = 1
-                                self.finished_flag = 1
-                        except:
-                            pass
-                        
+                                # self.arm.move(self.arm.a)
+                            self.arm.move(self.arm.a)
+
+                            try:                                
+                                if self.now_dist_web <= 40 or self.limit_times >=100:
+                                    self.arm.home()
+                                    self.arm.a = [-18,0,0,0,0]
+                                    self.mid = None
+                                    self.arm_loc = None
+                                    self.now_dist_web = 1000
+                                    self.limit_times = 0 
+                                    case = 0
+                                    self.grass_flag_A = 1
+                                    self.grass_flag_B = 1
+                                    self.finished_flag = 1
+                            except:
+                                pass
+                            
                 elif len(self.data1) > 5:
                     self.data1 = []
+                    self.n = 0 
                     
              #如果沒抓到草，車子移動
             else:
