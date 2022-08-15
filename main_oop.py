@@ -311,13 +311,26 @@ class Cam():
                     self.temp_grass_A = None
                     
             #cam2尋找手臂的位置
-            if self.data1_a.name.any():
-                if self.results_roi_web.pandas().xyxy[0].name[0] == 'arm':
-                    self.arm_loc_web = self.mid_point(self.data1_a)
+            #由於使用深度學習有角度判斷問題，使用顏色辦別替代
+            # if self.data1_a.name.any():
+            #     if self.results_roi_web.pandas().xyxy[0].name[0] == 'arm':
+            #         self.arm_loc_web = self.mid_point(self.data1_a)
+            #         cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+            #     else:
+            #         self.arm_loc_web = None
+            
+            self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
+            self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
+            
+            try:
+                if self.contours_r_web:
+                    self.arm_loc_web = self.contours_r_web[0]['center']
                     cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc_web = None
-                    
+            except:
+                pass
+            
             #cam2尋找草的位置
             if self.data1_g.name.any():
                 if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
