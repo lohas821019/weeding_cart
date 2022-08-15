@@ -250,6 +250,7 @@ class Cam():
         self.data1 = []
 
         self.car.state = 0
+        self.finished_flag = 0
 
     def distance(self,x,y):
         sx = pow(abs((x[0]-y[0])),2)
@@ -270,10 +271,13 @@ class Cam():
             
             self.roi = self.frame[100:420,220:420]
             
-            # if self.frame_black_count == 5:
-            #     self.roi = np.zeros((320,200,3), np.uint8)
-            #     self.frame_black_count = 0
-            
+            if self.finished_flag:
+                self.frame = np.zeros((320,200,3), np.uint8) #要修正一下這個數值
+                self.frame_web = np.zeros((480,640,3), np.uint8)
+                self.frame_black_count += 1
+                if self.frame_black_count == 1:
+                    self.finished_flag = 0
+
             self.results_roi= self.model_arm.predict(self.frame)
             self.results_roi_g= self.model_grass.predict(self.frame)
             
@@ -381,6 +385,7 @@ class Cam():
                                 case = 0
                                 self.grass_flag_A = 1
                                 self.grass_flag_B = 1
+                                self.finished_flag = 1
                         except:
                             pass
                         
