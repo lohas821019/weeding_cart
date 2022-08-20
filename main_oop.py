@@ -242,6 +242,8 @@ class Cam():
         
         self.grass_flag_A = 1
         self.grass_flag_B = 1
+        self.temp_grass_A = None
+        self.temp_grass_B = None
         
         self.limit_times = 0
         self.frame_black_count = 0
@@ -348,11 +350,12 @@ class Cam():
             cv2.imshow("roi", self.roi)
             
             if self.temp_grass_A and self.arm_loc:
-                if self.car.state != 0:
-                    self.car.stop()
-                    self.car.state = 0
-                    print(f'car.state = {self.car.state}')
-
+                # if self.car.state != 0:
+                #     self.car.stop()
+                #     self.car.state = 0
+                #     print(f'car.state = {self.car.state}')
+                
+                self.car.stop()
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
@@ -383,12 +386,15 @@ class Cam():
                         # try:
                             if case == 0:
                                 self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
-                                # self.arm.move(self.arm.a)
+                                self.arm.move(self.arm.a)
                                 
                             elif case == 1:
-                                self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
-                                # self.arm.move(self.arm.a)
-                            self.arm.move(self.arm.a)
+                                try:
+                                    self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
+                                    self.arm.move(self.arm.a)
+                                except:
+                                    pass
+                            # self.arm.move(self.arm.a)
 
                             try:                                
                                 if self.now_dist_web <= 40 or self.limit_times >=100:
@@ -411,9 +417,11 @@ class Cam():
                     
              #如果沒抓到草，車子移動
             else:
-                if self.car.state == 0:
-                    self.car.backward()
-                    self.car.state = 2
+                # if self.car.state == 0:
+                #     self.car.backward()
+                #     self.car.state = 2
+                self.car.backward()
+         
             
 
             k = cv2.waitKey(1) & 0xFF
