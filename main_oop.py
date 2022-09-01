@@ -58,7 +58,17 @@ class Car():
     def close(self):
         self.ser.close()
         print('車輛關閉')
-        
+    
+    def motor_on(self):
+        data_s = np.array('6').tobytes()
+        self.ser.write(data_s)
+        print('除草馬達打開')        
+
+    def motor_off(self):
+        data_s = np.array('5').tobytes()
+        self.ser.write(data_s)
+        print('除草馬達關閉')  
+    
     def response(self):
         # while self.ser.in_waiting:
         mcu_feedback = self.ser.readline()
@@ -231,8 +241,8 @@ class Cam():
         self.hsvVals_g_web = {'hmin': 39, 'smin': 95, 'vmin': 0, 'hmax': 104, 'smax': 214, 'vmax': 255}
         self.hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vmax': 255}
         
-        self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-        self.cap_web = cv2.VideoCapture(2,cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(3,cv2.CAP_DSHOW)
+        self.cap_web = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 
         self.myColorFinder = ColorFinder()
         self.myColorFinder1 = ColorFinder()
@@ -356,6 +366,7 @@ class Cam():
                 #     print(f'car.state = {self.car.state}')
                 
                 self.car.stop()
+                self.car.motor_on()
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
@@ -381,8 +392,8 @@ class Cam():
                 else:
                     case = 1
                     
-                if self.n == 5:
-                    if self.data1[self.n-1]-self.data1[self.n-2]<=3 and self.data1[self.n-2]-self.data1[self.n-3]<=3 and self.data1[self.n-3]-self.data1[self.n-4]<=5:
+                if self.n == 2:
+                    if self.data1[self.n-1]-self.data1[self.n-2]<=3 :
                         # try:
                             if case == 0:
                                 self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
@@ -421,8 +432,8 @@ class Cam():
                 #     self.car.backward()
                 #     self.car.state = 2
                 self.car.backward()
-         
-            
+                self.car.motor_off()
+        
 
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
