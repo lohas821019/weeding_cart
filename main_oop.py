@@ -241,8 +241,8 @@ class Cam():
         self.hsvVals_g_web = {'hmin': 39, 'smin': 95, 'vmin': 0, 'hmax': 104, 'smax': 214, 'vmax': 255}
         self.hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vmax': 255}
         
-        self.cap = cv2.VideoCapture(3,cv2.CAP_DSHOW)
-        self.cap_web = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+        self.cap_web = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 
         self.myColorFinder = ColorFinder()
         self.myColorFinder1 = ColorFinder()
@@ -263,7 +263,7 @@ class Cam():
 
         self.car.state = 0
         self.finished_flag = 0
-        self.roi = self.frame[100:420,220:420]
+        # self.roi = self.frame[100:420,220:420]
 
     def distance(self,x,y):
         sx = pow(abs((x[0]-y[0])),2)
@@ -322,7 +322,7 @@ class Cam():
 
             cv2.waitKey(1)
             cv2.imshow("frame", self.frame)
-            cv2.imshow("frame_web", self.frame_web)
+            # cv2.imshow("frame_web", self.frame_web)
             #cv2.imshow("roi", self.roi)
             
             if self.temp_grass_A and self.arm_loc:
@@ -363,9 +363,9 @@ class Cam():
                         cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
                     else:
                         self.temp_grass_B = None
+                        
                 cv2.waitKey(1)
                 cv2.imshow("frame_web", self.frame_web)
-
 
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
@@ -407,7 +407,7 @@ class Cam():
                                     pass
 
                             try:                                
-                                if self.now_dist_web <= 40 or self.limit_times >=100:
+                                if self.now_dist_web <= 40 or self.limit_times >=80:
                                     self.arm.home()
                                     self.arm.a = [-18,0,0,0,0]
                                     self.mid = None
@@ -419,10 +419,12 @@ class Cam():
                                     self.grass_flag_B = 1
                                     self.finished_flag = 1
                                     self.car.motor_off()
+                                    cv2.destroyAllWindows()
+
                             except:
                                 pass
                             
-                elif len(self.data1) > 5:
+                elif len(self.data1) > 3:
                     self.data1 = []
                     self.n = 0 
                     
