@@ -296,7 +296,7 @@ class Cam():
             if self.data0_a.name.any():
                 if self.results_roi.pandas().xyxy[0].name[0] == 'arm':
                     self.arm_loc = self.mid_point(self.data0_a)
-                    # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                    cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
                 else:
                     self.arm_loc = None
                     
@@ -304,12 +304,12 @@ class Cam():
             if self.data0_g.name.any():
                 if self.results_roi_g.pandas().xyxy[0].name[0] == 'grass':
                     self.mid = self.mid_point(self.data0_g)
-                    # if self.grass_flag_A:
-                    #     self.temp_grass_A = self.mid
-                    #     self.grass_flag_A = 0
-                    # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                    if self.grass_flag_A:
+                        self.temp_grass_A = self.mid
+                        self.grass_flag_A = 0
+                    cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 else:
-                    self.mid = None
+                    self.temp_grass_A = None
                     
             #cam2尋找手臂的位置
             #由於使用深度學習有角度判斷問題，使用顏色辦別替代
@@ -325,7 +325,7 @@ class Cam():
             # cv2.imshow("frame_web", self.frame_web)
             #cv2.imshow("roi", self.roi)
             
-            if self.mid and self.arm_loc:
+            if self.temp_grass_A and self.arm_loc:
                 # if self.car.state != 0:
                 #     self.car.stop()
                 #     self.car.state = 0
@@ -334,11 +334,11 @@ class Cam():
                 self.car.motor_on()
                 
                 #延後標註影像的點
-                cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
-                if self.grass_flag_A:
-                    self.temp_grass_A = self.mid
-                    self.grass_flag_A = 0
-                cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                # if self.grass_flag_A:
+                #     self.temp_grass_A = self.mid
+                #     self.grass_flag_A = 0
+                # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 
                 #開啟cam2並使用yolov5
                 _, self.frame_web = self.cap_web.read()
