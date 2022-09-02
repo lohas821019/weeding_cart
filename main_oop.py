@@ -330,9 +330,9 @@ class Cam():
                 #     self.car.stop()
                 #     self.car.state = 0
                 #     print(f'car.state = {self.car.state}')
-                
                 self.car.stop()
                 self.car.motor_on()
+                
                 _, self.frame_web = self.cap_web.read()
                 self.results_roi_web= self.model_arm.predict(self.frame_web)
                 self.results_roi_web_g= self.model_grass.predict(self.frame_web)
@@ -405,7 +405,6 @@ class Cam():
                                     self.arm.move(self.arm.a)
                                 except:
                                     pass
-                            # self.arm.move(self.arm.a)
 
                             try:                                
                                 if self.now_dist_web <= 40 or self.limit_times >=100:
@@ -419,6 +418,7 @@ class Cam():
                                     self.grass_flag_A = 1
                                     self.grass_flag_B = 1
                                     self.finished_flag = 1
+                                    self.car.motor_off()
                             except:
                                 pass
                             
@@ -438,6 +438,7 @@ class Cam():
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 self.arm.home()
+                self.car.motor_off()
                 self.car.close()
                 break
 
