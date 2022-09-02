@@ -263,6 +263,7 @@ class Cam():
 
         self.car.state = 0
         self.finished_flag = 0
+        self.roi = self.frame[100:420,220:420]
 
     def distance(self,x,y):
         sx = pow(abs((x[0]-y[0])),2)
@@ -277,11 +278,7 @@ class Cam():
         
     def run(self):
         while self.cap.isOpened:
-            
             _, self.frame = self.cap.read()
-            _, self.frame_web = self.cap_web.read()
-            
-            self.roi = self.frame[100:420,220:420]
             
             if self.finished_flag:
                 self.frame = np.zeros((480,640,3), np.uint8) #要修正一下這個數值
@@ -292,16 +289,8 @@ class Cam():
 
             self.results_roi= self.model_arm.predict(self.frame)
             self.results_roi_g= self.model_grass.predict(self.frame)
-            
-            self.results_roi_web= self.model_arm.predict(self.frame_web)
-            self.results_roi_web_g= self.model_grass.predict(self.frame_web)
-            
             self.data0_a = self.results_roi.pandas().xyxy[0]
             self.data0_g = self.results_roi_g.pandas().xyxy[0]
-            
-            self.data1_a = self.results_roi_web.pandas().xyxy[0]
-            self.data1_g = self.results_roi_web_g.pandas().xyxy[0]
-
 
             #cam1尋找手臂的位置
             if self.data0_a.name.any():
@@ -330,34 +319,11 @@ class Cam():
             #         cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
             #     else:
             #         self.arm_loc_web = None
-            
-            self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
-            self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
-            
-            try:
-                if self.contours_r_web:
-                    self.arm_loc_web = self.contours_r_web[0]['center']
-                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
-                else:
-                    self.arm_loc_web = None
-            except:
-                pass
-            
-            #cam2尋找草的位置
-            if self.data1_g.name.any():
-                if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
-                    self.mid_web = self.mid_point(self.data1_g)
-                    if self.grass_flag_B:
-                        self.temp_grass_B = self.mid_web
-                        self.grass_flag_B = 0
-                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
-                else:
-                    self.temp_grass_B = None
-                    
+
             cv2.waitKey(1)
             cv2.imshow("frame", self.frame)
             cv2.imshow("frame_web", self.frame_web)
-            cv2.imshow("roi", self.roi)
+            #cv2.imshow("roi", self.roi)
             
             if self.temp_grass_A and self.arm_loc:
                 # if self.car.state != 0:
@@ -367,6 +333,40 @@ class Cam():
                 
                 self.car.stop()
                 self.car.motor_on()
+                _, self.frame_web = self.cap_web.read()
+                self.results_roi_web= self.model_arm.predict(self.frame_web)
+                self.results_roi_web_g= self.model_grass.predict(self.frame_web)
+                
+                self.data1_a = self.results_roi_web.pandas().xyxy[0]
+                self.data1_g = self.results_roi_web_g.pandas().xyxy[0]
+                
+                #cam1有找到草再開cam2
+                _, self.frame_web = self.cap_web.read()
+                self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
+                self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
+                try:
+                    if self.contours_r_web:
+                        self.arm_loc_web = self.contours_r_web[0]['center']
+                        cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                    else:
+                        self.arm_loc_web = None
+                except:
+                    pass
+                
+                #cam2尋找草的位置
+                if self.data1_g.name.any():
+                    if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
+                        self.mid_web = self.mid_point(self.data1_g)
+                        if self.grass_flag_B:
+                            self.temp_grass_B = self.mid_web
+                            self.grass_flag_B = 0
+                        cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                    else:
+                        self.temp_grass_B = None
+                cv2.waitKey(1)
+                cv2.imshow("frame_web", self.frame_web)
+
+
                 #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
