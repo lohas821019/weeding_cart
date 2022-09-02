@@ -241,8 +241,8 @@ class Cam():
         self.hsvVals_g_web = {'hmin': 39, 'smin': 95, 'vmin': 0, 'hmax': 104, 'smax': 214, 'vmax': 255}
         self.hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vmax': 255}
         
-        self.cap = ""
-        self.cap_web = ""
+        self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+        self.cap_web = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 
         # self.myColorFinder = ColorFinder()
         self.myColorFinder1 = ColorFinder()
@@ -285,7 +285,7 @@ class Cam():
                 
             if self.car.response() =='9': #車子回傳指令後
                 self.move_flag = 0
-                self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+                #self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
                 _, self.frame = self.cap.read()
 
                 self.results_roi= self.model_arm.predict(self.frame)
@@ -314,7 +314,7 @@ class Cam():
 
                 cv2.waitKey(1)
                 cv2.imshow("frame", self.frame)
-                self.cap.release()
+                #self.cap.release()
 
                 if self.mid and self.arm_loc:
                     self.car.stop()
@@ -328,7 +328,7 @@ class Cam():
                     cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                     
                     #開啟cam2並使用yolov5
-                    self.cap_web = cv2.VideoCapture(3,cv2.CAP_DSHOW)
+                    #self.cap_web = cv2.VideoCapture(3,cv2.CAP_DSHOW)
                     
                     _, self.frame_web = self.cap_web.read()
                     self.results_roi_web= self.model_arm.predict(self.frame_web)
@@ -363,8 +363,9 @@ class Cam():
                             
                     cv2.waitKey(1)
                     cv2.imshow("frame_web", self.frame_web)
-                    self.cap_web.release()
-    
+                    #self.cap_web.release()
+
+#%%
                     #計算手臂與雜草距離
                     self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                     print(f'now_dist = {self.now_dist}')
@@ -391,7 +392,7 @@ class Cam():
                         case = 1
                     
                     if self.n == 2:
-                        if self.data1[self.n-1]-self.data1[self.n-2]<=3 :
+                        if self.data1[self.n+1]-self.data1[self.n] and self.data1[self.n+2]-self.data1[self.n+1]<=3 :
                             # try:
                                 if case == 0:
                                     self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
