@@ -264,6 +264,7 @@ class Cam():
         self.car.state = 0
         self.finished_flag = 0
         self.move_flag = 1
+        self.car_set_flag = 1
         # self.roi = self.frame[100:420,220:420]
 
     def distance(self,x,y):
@@ -282,7 +283,7 @@ class Cam():
             #如果返回指定代表有收到訊號，車子往前走了
             if self.move_flag:
                 self.car.backward()
-                self.move_flag=0
+                self.move_flag = 0
                            
             if self.car.response() =='9': #車子回傳指令後
                 self.move_flag = 0
@@ -325,8 +326,10 @@ class Cam():
             #self.cap.release()
 
             if self.mid and self.arm_loc:
-                self.car.stop()
-                self.car.motor_on()
+                if self.car_set_flag:
+                    self.car.stop()
+                    self.car.motor_on()
+                    self.car_set_flag=0
                     
                     #延後標註影像的點
                     # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
@@ -362,6 +365,7 @@ class Cam():
                 if self.data1_g.name.any():
                     if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
                         self.mid_web = self.mid_point(self.data1_g)
+                        print(f'self.mid_web = {self.mid_web}')
                         if self.grass_flag_B:
                             self.temp_grass_B = self.mid_web
                             self.grass_flag_B = 0
@@ -425,19 +429,20 @@ class Cam():
                                     self.grass_flag_A = 1
                                     self.grass_flag_B = 1
                                     self.finished_flag = 1
+                                    self.car_set_flag = 1
                                     self.car.motor_off()
                                     cv2.destroyAllWindows()
 
                             except:
                                 pass
                         
-                elif len(self.data1) > 3:
+                elif len(self.data1) > 2:
                     self.data1 = []
                     self.n = 0 
                 
             #如果沒抓到草，車子移動
             else:
-                self.car.motor_off()
+                #self.car.motor_off()
                 self.move_flag = 1       
 
             k = cv2.waitKey(1) & 0xFF
