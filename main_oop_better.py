@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Created on Thu Sep 15 17:27:39 2022
+
+@author: zanrobot
+"""
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Jun 20 09:42:38 2022
 @author: Jason
 """
 import os
 os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
-#os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
+# os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
 
 import threading , queue
 import time
@@ -71,16 +77,11 @@ class Car():
     
     def response(self):
         # while self.ser.in_waiting:
-        while True:    
-            mcu_feedback = self.ser.readline()
-            mcu_feedback = mcu_feedback.decode("utf-8") # 接收回應訊息並解碼
-            mcu_feedback = mcu_feedback.strip()
-            # time.sleep(0.1)
-            return mcu_feedback
-    
-    def thread_response(self):
-        t = threading.Thread(target=(self.response))
-        t.start()
+        mcu_feedback = self.ser.readline()
+        mcu_feedback = mcu_feedback.decode("utf-8") # 接收回應訊息並解碼
+        mcu_feedback = mcu_feedback.strip()
+        # time.sleep(0.1)
+        return mcu_feedback
     
     def response1(self):
         tdata = self.ser.read()           # Wait forever for anything
@@ -234,9 +235,7 @@ class Yolov5_Model_Grass():
     
 #%% CAM
 class Cam():
-    def __init__(self,car,arm,model_arm,model_grass,q,q2):
-        self.q = q
-        self.q2 = q2
+    def __init__(self,car,arm,model_arm,model_grass):
         self.car = car
         self.arm = arm
         self.model_arm = model_arm
@@ -247,7 +246,11 @@ class Cam():
         
         self.hsvVals_g_web = {'hmin': 39, 'smin': 95, 'vmin': 0, 'hmax': 104, 'smax': 214, 'vmax': 255}
         self.hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vmax': 255}
-    
+        
+        self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+        self.cap_web = cv2.VideoCapture(1,cv2.CAP_DSHOW)
+
+        # self.myColorFinder = ColorFinder()
         self.myColorFinder1 = ColorFinder()
 
         self.arm_loc = None
@@ -264,8 +267,10 @@ class Cam():
         self.n = 0
         self.data1 = []
 
-        self.car.state = 1
-        self.move_flag = 1
+        self.car.state = 0
+        self.finished_flag = 0
+        
+        self.car_stop_flag = 1
         # self.roi = self.frame[100:420,220:420]
 
     def distance(self,x,y):
@@ -278,30 +283,24 @@ class Cam():
         arm_loc = ((data.xmin + data.xmax)/2,(data.ymin + data.ymax)/2)
         arm_loc = [int(arm_loc[0][0]),int(arm_loc[1][0])]
         return arm_loc
-    
-    def thread_job(self):
-        t = threading.Thread(target=self.show_image)
-        t.start()
-
-    def show_image(self):
-        self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-        self.cap_web = cv2.VideoCapture(1,cv2.CAP_DSHOW)
-
-        while True:
+        
+    def run(self):
+        while self.cap.isOpened:
             _, self.frame = self.cap.read()
-            _, self.frame_web = self.cap_web.read()
+            
+            if self.finished_flag:
+                self.frame = np.zeros((480,640,3), np.uint8) #要修正一下這個數值
+                self.frame_web = np.zeros((480,640,3), np.uint8)
+                self.frame_black_count += 1
+                if self.frame_black_count == 5:
+                    self.finished_flag = 0
 
             self.results_roi= self.model_arm.predict(self.frame)
             self.results_roi_g= self.model_grass.predict(self.frame)
             self.data0_a = self.results_roi.pandas().xyxy[0]
             self.data0_g = self.results_roi_g.pandas().xyxy[0]
 
-            self.results_roi_web= self.model_arm.predict(self.frame_web)
-            self.results_roi_web_g= self.model_grass.predict(self.frame_web)
-            self.data1_a = self.results_roi_web.pandas().xyxy[0]
-            self.data1_g = self.results_roi_web_g.pandas().xyxy[0]
-            
-            #%%cam1
+            #cam1尋找手臂的位置
             if self.data0_a.name.any():
                 if self.results_roi.pandas().xyxy[0].name[0] == 'arm':
                     self.arm_loc = self.mid_point(self.data0_a)
@@ -318,148 +317,175 @@ class Cam():
                         self.grass_flag_A = 0
                     cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
                 else:
-                    self.mid = None
+                    self.temp_grass_A = None
+                    
+            #cam2尋找手臂的位置
+            #由於使用深度學習有角度判斷問題，使用顏色辦別替代
+            # if self.data1_a.name.any():
+            #     if self.results_roi_web.pandas().xyxy[0].name[0] == 'arm':
+            #         self.arm_loc_web = self.mid_point(self.data1_a)
+            #         cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+            #     else:
+            #         self.arm_loc_web = None
 
-            #%%
-            #cam2
-            self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
-            self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
-            try:
-                if self.contours_r_web:
-                    self.arm_loc_web = self.contours_r_web[0]['center']
-                    cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
-                else:
-                    self.arm_loc_web = None
-            except:
-                pass
-        
-            #cam2尋找草的位置
-            if self.data1_g.name.any():
-                if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
-                    self.mid_web = self.mid_point(self.data1_g)
-                    # print(f'self.mid_web = {self.mid_web}')
-                    if self.grass_flag_B:
-                        self.temp_grass_B = self.mid_web
-                        self.grass_flag_B = 0
-                    cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
-                else:
-                    self.temp_grass_B = None
-                
             cv2.waitKey(1)
             cv2.imshow("frame", self.frame)
-            cv2.imshow("frame_web", self.frame_web)
+            # cv2.imshow("frame_web", self.frame_web)
+            #cv2.imshow("roi", self.roi)
+            
+            if self.temp_grass_A and self.arm_loc:
+                # if self.car.state != 0:
+                #     self.car.stop()
+                #     self.car.state = 0
+                #     print(f'car.state = {self.car.state}')
+                if self.car_stop_flag:
+                    self.car.stop()
+                    time.sleep(5)
+                    self.car.motor_on()
 
-            #%%
-            #計算手臂與雜草距離
-            if self.arm_loc and self.temp_grass_A :
+                    self.car_stop_flag = 0
+
+                
+                #延後標註影像的點
+                # cv2.circle(self.frame,(int(self.arm_loc[0]),int(self.arm_loc[1])), 8, (0, 255, 255), -1)
+                # if self.grass_flag_A:
+                #     self.temp_grass_A = self.mid
+                #     self.grass_flag_A = 0
+                # cv2.circle(self.frame,(int(self.temp_grass_A[0]),int(self.temp_grass_A[1])), 8, (0, 0, 255), -1)
+                
+                #開啟cam2並使用yolov5
+                _, self.frame_web = self.cap_web.read()
+                self.results_roi_web= self.model_arm.predict(self.frame_web)
+                self.results_roi_web_g= self.model_grass.predict(self.frame_web)
+                
+                self.data1_a = self.results_roi_web.pandas().xyxy[0]
+                self.data1_g = self.results_roi_web_g.pandas().xyxy[0]
+                
+                #cam1有找到草再開cam2
+                _, self.frame_web = self.cap_web.read()
+                self.imgColor_r_web, self.mask_r_web = self.myColorFinder1.update(self.frame_web,self.hsvVals_r_web)
+                self.imgContour_r_web, self.contours_r_web = cvzone.findContours(self.frame_web, self.mask_r_web,minArea=500)
+                try:
+                    if self.contours_r_web:
+                        self.arm_loc_web = self.contours_r_web[0]['center']
+                        cv2.circle(self.frame_web,(int(self.arm_loc_web[0]),int(self.arm_loc_web[1])), 8, (0, 255, 255), -1)
+                    else:
+                        self.arm_loc_web = None
+                except:
+                    pass
+                
+                #cam2尋找草的位置
+                if self.data1_g.name.any():
+                    if self.results_roi_web_g.pandas().xyxy[0].name[0] == 'grass':
+                        self.mid_web = self.mid_point(self.data1_g)
+                        if self.grass_flag_B:
+                            self.temp_grass_B = self.mid_web
+                            self.grass_flag_B = 0
+                        cv2.circle(self.frame_web,(int(self.temp_grass_B[0]),int(self.temp_grass_B[1])), 8, (0, 0, 255), -1)
+                    else:
+                        self.temp_grass_B = None
+                        
+                cv2.waitKey(1)
+                cv2.imshow("frame_web", self.frame_web)
+
+                #計算手臂與雜草距離
                 self.now_dist = self.distance(self.arm_loc,self.temp_grass_A)
                 print(f'now_dist = {self.now_dist}')
-            try:
-                if self.temp_grass_B and self.arm_loc_web:
-                    #計算手臂與雜草距離
-                    self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
-                    print(f'now_dist_web = {self.now_dist_web}')
-            except:
-                pass
 
-            try:
+                try:
+                    if self.temp_grass_B and self.arm_loc_web:
+                        #計算手臂與雜草距離
+                         self.now_dist_web = self.distance(self.arm_loc_web,self.temp_grass_B)
+                         print(f'now_dist_web = {self.now_dist_web}')
+                except:
+                    pass
+
+                if self.now_dist!=0:
+                    self.n = self.n + 1
+                    print(f'n = {self.n}')
+                    self.data1.append(self.now_dist)
+                    print(f'data1 = {self.data1}')
+                    self.limit_times += 1
+                    print(f'limit_times = {self.limit_times}')
+
                 if self.now_dist >= 50:
                     case = 0
-                    item = self.q.put((case,self.temp_grass_A,self.arm_loc))
                 else:
                     case = 1
-                    item = self.q.put((case,self.temp_grass_B,self.arm_loc_web))
-            except:
-                pass
-            
+                    
+                if self.n == 2:
+                    if self.data1[self.n-1]-self.data1[self.n-2]<=3 :
+                        # try:
+                            if case == 0:
+                                self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
+                                self.arm.move(self.arm.a)
+                                
+                            elif case == 1:
+                                try:
+                                    self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
+                                    self.arm.move(self.arm.a)
+                                except:
+                                    pass
+
+                            try:                                
+                                if self.now_dist_web <= 40 or self.limit_times >=80:
+                                    self.arm.home()
+                                    self.arm.a = [-18,0,0,0,0]
+                                    self.mid = None
+                                    self.arm_loc = None
+                                    self.now_dist_web = 1000
+                                    self.limit_times = 0 
+                                    case = 0
+                                    self.grass_flag_A = 1
+                                    self.grass_flag_B = 1
+                                    self.finished_flag = 1
+                                    self.car_stop_flag = 1
+
+                                    self.car.motor_off()
+                                    cv2.destroyAllWindows()
+
+                            except:
+                                pass
+                            
+                elif len(self.data1) > 3:
+                    self.data1 = []
+                    self.n = 0 
+                    
+             #如果沒抓到草，車子移動
+            else:
+                # if self.car.state == 0:
+                #     self.car.backward()
+                #     self.car.state = 2
+                self.car_stop_flag = 1
+
+                self.car.backward()
+                self.car.motor_off()
+                
+        
+
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 self.arm.home()
                 self.car.motor_off()
-                time.sleep(3)
                 self.car.close()
-                self.arm_exit()
-
                 break
 
-        #%%
-    def run(self):
-        while True:
-            time.sleep(3)
-            # print(self.limit_times)
-            #如果返回指定代表有收到訊號，車子往前走了
-            if self.move_flag:
-                self.car.backward()
-                                       
-                #self.cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-            if self.q.qsize()>0:
-                if self.car.state == 1:
-                    self.car.stop()
-                    self.move_flag = 0
-                    self.car.state = 0
-
-                case = self.q.get(timeout =0.01)
-                print(case)
-
-                if case[0] == 0:
-                    self.temp_grass_A,self.arm_loc = (case[1],case[2])
-                    self.arm.arm_control1(self.temp_grass_A,self.arm_loc)
-                    self.arm.move(self.arm.a)
-                    self.limit_times = self.limit_times +1
-                    self.car.motor_on()
-
-                    
-                elif case[0] == 1:
-                    try:
-                        self.temp_grass_B,self.arm_loc_web = (case[1],case[2])
-                        self.arm.arm_control_by_red(self.temp_grass_B,self.arm_loc_web)
-                        self.arm.move(self.arm.a)
-                        self.limit_times = self.limit_times +1
-                        
-                    except:
-                        pass
-                try:
-                    if self.q2.qsize()>0: 
-                        self.now_dist_web = self.q2.get(timeout =0.01) 
-
-                    if self.now_dist_web <= 40 or self.limit_times >=100:
-                        self.arm.home()
-                        self.arm.a = [-18,0,0,0,0]
-                        self.mid = None
-                        self.arm_loc = None
-                        self.now_dist_web = 1000
-                        self.limit_times = 0 
-                        self.grass_flag_A = 1
-                        self.grass_flag_B = 1
-                        self.car.motor_off()
-                        # cv2.destroyAllWindows()
-                        
-                except:
-                    pass
-            else:
-                self.move_flag = 1
-                self.car.state = 1
-
-
+        cv2.destroyAllWindows()
+        self.cap.release()
+        self.arm.arm_exit()
+        sys.exit()
 
 #%%
 def main():
 
-    q = queue.Queue()
-    q2 = queue.Queue()
-    
     car = Car()
-    car.thread_response()
     arm = Arm()
     model_arm = Yolov5_Model_Arm()
     model_grass = Yolov5_Model_Grass()
-    
-    
-    cam = Cam(car,arm,model_arm,model_grass,q,q2)
-    time.sleep(5)
-    cam.thread_job()
-    cam.run()
 
+    cam = Cam(car,arm,model_arm,model_grass)
+    time.sleep(5)
+    cam.run()
 
 
 if __name__=="__main__":
