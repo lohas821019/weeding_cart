@@ -18,19 +18,6 @@ import sys
 # os.chdir(r'C:\Users\zanrobot\Desktop\weeding_cart')
 os.chdir(r'C:\Users\Jason\Documents\GitHub\weeding_cart')
 
-#抓取紅色設定
-myColorFinder = ColorFinder()
-myColorFinder1 = ColorFinder()
-
-hsvVals_r = {'hmin': 0, 'smin': 40, 'vmin': 41, 'hmax': 9, 'smax': 255, 'vmax': 255}
-hsvVals_g = {'hmin': 71, 'smin': 238, 'vmin': 0, 'hmax': 100, 'smax': 255, 'vmax': 255}
-hsvVals_g_web = {'hmin': 39, 'smin': 95, 'vmin': 0, 'hmax': 104, 'smax': 214, 'vmax': 255}
-hsvVals_r_web = {'hmin': 0, 'smin': 112, 'vmin': 43, 'hmax': 9, 'smax': 255, 'vmax': 255}
-
-#機械手臂參數設定，手臂初始位置
-# 手臂motor1={"max":10,"min":-18}
-# 手臂motor2={"max":10,"min":-8}
-
 global a
 a = [-18,0,0,0,0]
 
@@ -162,7 +149,7 @@ grass_flag_B = 1
 while 1:
     #cam1
     _, frame = cap.read()
-    # frame = frame[]
+
     results_roi = model(frame, size=640)
     results_roi.pred
     data = results_roi.pandas().xyxy[0]
@@ -295,7 +282,7 @@ while 1:
                             grass_flag = 1
                     except:
                         pass
-        elif n>10:
+        elif n>5:
             first = 1
             
      #如果沒抓到草，車子移動
